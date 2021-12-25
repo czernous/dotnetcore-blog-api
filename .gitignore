@@ -2,5 +2,5 @@
 .vs
 .vscode
 env
-**/obj
-**/bin
+/**/**/obj/
+/**/**/bin/

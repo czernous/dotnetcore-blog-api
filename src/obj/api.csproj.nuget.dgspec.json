@@ -1,25 +1,27 @@
 {
   "format": 1,
   "restore": {
-    "/app/src/api.csproj": {}
+    "\\\\wsl.localhost\\Ubuntu-18.04\\home\\czernous\\development\\personal\\fs-freelace-app\\api\\src\\api.csproj": {}
   },
   "projects": {
-    "/app/src/api.csproj": {
+    "\\\\wsl.localhost\\Ubuntu-18.04\\home\\czernous\\development\\personal\\fs-freelace-app\\api\\src\\api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/app/src/api.csproj",
+        "projectUniqueName": "\\\\wsl.localhost\\Ubuntu-18.04\\home\\czernous\\development\\personal\\fs-freelace-app\\api\\src\\api.csproj",
         "projectName": "api",
-        "projectPath": "/app/src/api.csproj",
-        "packagesPath": "/root/.nuget/packages/",
-        "outputPath": "/app/src/obj/",
+        "projectPath": "\\\\wsl.localhost\\Ubuntu-18.04\\home\\czernous\\development\\personal\\fs-freelace-app\\api\\src\\api.csproj",
+        "packagesPath": "C:\\Users\\Anton\\.nuget\\packages\\",
+        "outputPath": "\\\\wsl.localhost\\Ubuntu-18.04\\home\\czernous\\development\\personal\\fs-freelace-app\\api\\src\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Anton\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net5.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -91,7 +93,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/5.0.404/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.101\\RuntimeIdentifierGraph.json"
         }
       }
     }
