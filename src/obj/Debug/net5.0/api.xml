@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>api</name>
+    </assembly>
+    <members>
+        <member name="M:api.Controllers.ImagesController.#ctor(CloudinaryDotNet.Cloudinary,api.Services.ImageService,api.Services.PostService)">
+            Images controller
+        </member>
+        <member name="M:api.Controllers.ImagesController.UploadFile(Microsoft.AspNetCore.Http.IFormFile)">
+             <summary>
+             Uploads image to cloudinary and save it's metadata(urls) to the database
+             </summary>
+             <returns>Void</returns>
+             <remarks>
+             The end point accepts "filename" and "folder" query string params
+             
+             The process:
+            
+               1. The code checks if the uploaded image already exists in the database(to be implemented)
+               2. The uploaded file is resized if larger than 2400px wide
+               3. The file is converted to base64 string
+               4. The code checks if the query string contains "folder" or "filename" params
+               5. If the query string is empty, the file is uploaded to Cloudinary with a random name to the root folder \n
+               7. Otherwise it is uploaded to the specified folder with specified filename
+               8. A list of URLs with applied transformations(resized) is created
+               9. A new CldImage entity is created and saved to the database
+            
+             </remarks>
+             <response code="200">If the image was uploaded</response>
+             <response code="415">If the uploaded file content-type is incorrect</response>
+        </member>
+        <member name="T:api.Utils.ImageUtils">
+            <summary>
+            Utility methods to manipulate images and upload them to Cloudinary
+            </summary>
+        </member>
+        <member name="M:api.Utils.ImageUtils.#ctor(CloudinaryDotNet.Cloudinary)">
+            <summary>
+            ImageUtils constructor
+            </summary>
+            <param name="cloudinary"></param>
+        </member>
+        <member name="M:api.Utils.ImageUtils.ParseImageFormat(System.String)">
+            <summary>
+            Parses image format
+            </summary>
+            <param name="str"></param>
+            <returns>ImageFormat</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.ResizeImage(System.Drawing.Image,System.String,System.Int32)">
+            <summary>
+            Resizes an image if it's wider than specified resolutin
+            </summary>
+            <param name="image"></param>
+            <param name="fileName"></param>
+            <param name="maxWidth"></param>
+            <returns>Resized image Bitmap</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateCloudinaryLink(System.Int32,System.Int32,System.String,System.String)">
+            <summary>
+            Applies Cloudinary transformations and generates a link
+            </summary>
+            <param name="width"></param>
+            <param name="quality"></param>
+            <param name="path"></param>
+            <param name="fileName"></param>
+            <returns>A link to Cloudinary image</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateResponsiveImage(System.String)">
+            <summary>
+            Generates Cloudinary responsive image link (Suitable if Client app uses Cloudinary Library)
+            </summary>
+            <param name="cloudnaryFilePath"></param>
+            <returns>Cloudinary Responsive URL</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateUrlList(System.Collections.Generic.List{System.Int32},System.Int32,System.String,System.String)">
+            <summary>
+            Generates an array of links with additional Cloudinary transformations applied (different sizes)
+            </summary>
+            <param name="resolutions"></param>
+            <param name="quality"></param>
+            <param name="path"></param>
+            <param name="fileName"></param>
+            <returns>A list of responsive Cloudinary links</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.CopyImageToMs(Microsoft.AspNetCore.Http.IFormFile)">
+            <summary>
+            Copies file to new memory stream, creates new Image from MS
+            </summary>
+            <param name="file"></param>
+            <returns>MemoryStream, fileStream, Image</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.ConvertMsToBytes(System.IO.MemoryStream)">
+            <summary>
+            Converts MemoryStream to byte array
+            </summary>
+            <param name="ms"></param>
+            <returns>Byte array</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.EncodeBitmapToMs(System.Drawing.Image,System.Drawing.Image,System.IO.MemoryStream,System.String)">
+            <summary>
+            Encodes new image and saves it to memory stream
+            </summary>
+            <param name="newImage"></param>
+            <param name="image"></param>
+            <param name="ms"></param>
+            <param name="imageFormat"></param>
+        </member>
+    </members>
+</doc>
