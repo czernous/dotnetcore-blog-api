@@ -11,4 +11,4 @@ The server expects an Api key passed in headers as ApiKey; It's value is defined
 
 Ports: 
 - Production: 5002;
-- Developpent: 5000(http)/5001(https);
+- Development: 5000(http)/5001(https);

@@ -1,26 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Web;
 using System.Threading.Tasks;
 using api.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
-using System.Drawing.Drawing2D;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Newtonsoft.Json.Linq;
 using api.Models;
-using MongoDB.Bson;
 using api.Services;
 using api.Utils;
-using Microsoft.Extensions.Localization;
 
 #pragma warning disable 1591
 
