@@ -12,7 +12,7 @@ using api.Filters;
 
 namespace api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     [ApiKeyAuth]
     public class PostsController : ControllerBase
@@ -103,17 +103,17 @@ namespace api.Controllers
                     if (c.Id == null) postIn.Categories.Remove(c);
                 }
             }
-            
+
             // add id to post object
             postIn.Id = id;
-            
+
             if (postIn.ImageUrl != null && postIn.ImageUrl != post.ImageUrl)
             {
                 // Update image urls if new image url is provided
                 CldImage image = await _imageService.GetByUrlAsync(postIn.ImageUrl);
 
                 if (image == null) return BadRequest("ImageUrl in the Post object is invalid or not found in the database");
-      
+
                 postIn.ResponsiveImgs = image.ResponsiveUrls;
                 image.UsedInPost = postIn;
                 await _imageService.UpdateAsync(image.Id, image);

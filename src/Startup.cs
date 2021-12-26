@@ -13,6 +13,7 @@ using api.Services;
 using api.Interfaces;
 using System.IO;
 using System.Reflection;
+using Microsoft.AspNetCore.HttpOverrides;
 
 #pragma warning disable 1591 
 
@@ -31,6 +32,11 @@ namespace api
         public void ConfigureServices(IServiceCollection services)
         {
 
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
             services.Configure<BlogDatabaseSettings>(
             Configuration.GetSection(nameof(BlogDatabaseSettings)));
             services.Configure<ApiSettings>(Configuration.GetSection(nameof(ApiSettings)));
@@ -89,10 +95,16 @@ namespace api
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Blog Api v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("v1/swagger.json", "Blog Api v1"));
+            }
+            else
+            {
+                app.UseForwardedHeaders();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseForwardedHeaders();
+
+            //app.UseHttpsRedirection();
 
             app.UseRouting();
 

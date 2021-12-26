@@ -16,7 +16,7 @@ using api.Utils;
 
 namespace api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     [ApiKeyAuth]
 
@@ -154,7 +154,7 @@ namespace api.Controllers
                     imageProperties.Add(prop.Name, prop.Value.ToString());
                 }
             }
-            
+
             // create a list of resized image links
             var urlList = _imageUtils.GenerateUrlList(new List<int>() { 512, 718, 1024, 1280 }, 70, cloudinaryStorageFolder, cloudinaryFileName);
 
@@ -203,8 +203,8 @@ namespace api.Controllers
             if (image == null) return NotFound();
 
             var post = await _postService.GetOneByImage(image);
-           
-            if(post !=null)
+
+            if (post != null)
             {
                 post.ImageUrl = null;
                 post.ResponsiveImgs = null;

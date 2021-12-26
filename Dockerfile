@@ -15,7 +15,11 @@ WORKDIR /app/src
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:5.0 as runtime
 
+ENV ASPNETCORE_URLS=http://*:9000
+#ENV ASPNETCORE_ENVIRONMENT=”production”
+#EXPOSE 9000
+
 RUN apt-get update && apt-get install -y apt-utils libgdiplus libc6-dev
 
 COPY --from=build /app/out .
-ENTRYPOINT ["dotnet", "api.dll"]
+ENTRYPOINT ["dotnet", "api.dll"] 
