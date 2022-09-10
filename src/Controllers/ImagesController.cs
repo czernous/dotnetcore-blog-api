@@ -89,7 +89,7 @@ namespace api.Controllers
         ///
         /// </remarks>
         /// <response code="200">If the image was uploaded</response>
-        /// <response code="415">If the uploaded file content-type is incorrect</response>
+        /// <response code="415">If the uploaded file content-type is incorrect or the request body is not multipart form (file)</response>
         [HttpPost]
         public async Task<ActionResult> UploadFile(IFormFile file)
         {

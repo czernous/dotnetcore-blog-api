@@ -30,13 +30,7 @@ namespace api.Models
 
         [BsonRequired]
         [Required]
-        [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
-        public string MetaDescription { get; set; }
-
-        [BsonRequired]
-        [Required]
-        [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
-        public string MetaKeywords { get; set; }
+        public SeoData Meta { get; set; }
 
         public bool isPublished { get; set; } = false;
 

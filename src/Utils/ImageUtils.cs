@@ -27,7 +27,7 @@ namespace api.Utils
         {
             _cloudinary = cloudinary;
         }
-        
+
         /// <summary>
         /// Parses image format
         /// </summary>
@@ -35,7 +35,7 @@ namespace api.Utils
         /// <returns>ImageFormat</returns>
         public static ImageFormat ParseImageFormat(string str)
         {
-            return (ImageFormat) typeof(ImageFormat)
+            return (ImageFormat)typeof(ImageFormat)
                 .GetProperty(str, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase)
                 ?.GetValue(null);
         }
@@ -49,14 +49,14 @@ namespace api.Utils
         /// <returns>Resized image Bitmap</returns>
         public static Image ResizeImage(Image image, string fileName, int maxWidth)
         {
-            decimal resizeRatio = (decimal) maxWidth / image.Width;
+            decimal resizeRatio = (decimal)maxWidth / image.Width;
             var newHeight = image.Width <= maxWidth ? image.Height : Convert.ToInt32(image.Height * resizeRatio);
             var newWidth = image.Width <= maxWidth ? image.Width : Convert.ToInt32(image.Width * resizeRatio);
             var img = new Bitmap(image, newWidth, newHeight);
 
             return img;
         }
-        
+
         /// <summary>
         /// Applies Cloudinary transformations and generates a link
         /// </summary>
@@ -100,7 +100,7 @@ namespace api.Utils
         /// <returns>A list of responsive Cloudinary links</returns>
         public List<string> GenerateUrlList(List<int> resolutions, int quality, string path, string fileName)
         {
-            
+
             List<string> responsiveUrls = new();
             if (String.IsNullOrEmpty(fileName) || String.IsNullOrEmpty(path)) return responsiveUrls;
             foreach (int resolution in resolutions)

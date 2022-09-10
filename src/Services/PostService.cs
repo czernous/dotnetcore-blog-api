@@ -35,6 +35,14 @@ namespace api.Services
         }
 
 
+        public async Task<Post> GetOneByTitleAsync(string title)
+        {
+            var filter = Builders<Post>.Filter.Eq("Title", title);
+            return await _posts.Find(filter).FirstOrDefaultAsync();
+        }
+
+
+
         public async Task UpdMatchingCatAsync(Category category, Category categoryIn)
         {
             var filter = Builders<Post>.Filter.AnyEq("Categories", category);

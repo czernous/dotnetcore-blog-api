@@ -61,9 +61,15 @@ namespace api.Controllers
                     }
                 }
 
+
+                var existingPosts = await _postService.GetOneByTitleAsync(post.Title);
+
+                if (existingPosts != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
+
                 if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
 
                 CldImage image = await _imageService.GetByUrlAsync(post.ImageUrl);
+                if (image == null) return BadRequest("The image link must come from Cloudinary. Please use /images to upload an image to Cloudinary and use the link provided");
                 post.ResponsiveImgs = image.ResponsiveUrls;
                 image.UsedInPost = post;
 
