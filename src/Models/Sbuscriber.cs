@@ -25,6 +25,6 @@ namespace api.Models
         [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
         public string Email { get; set; }
 
-        public DateTime Created { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }
