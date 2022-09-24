@@ -82,7 +82,7 @@ namespace api.Controllers
 
                 if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
 
-                var imageFilter = Builders<CldImage>.Filter.Eq("ImageUrl", post.ImageUrl);
+                var imageFilter = Builders<CldImage>.Filter.Eq("SecureUrl", post.ImageUrl);
 
                 CldImage image = _imageRepository.FindOne(imageFilter);
 
@@ -96,6 +96,8 @@ namespace api.Controllers
                 var sanitizedBody = sanitazer.Sanitize(post.Body);
 
                 post.Body = sanitizedBody;
+                post.Meta.OpenGraph.Title = post.Title;
+                post.Meta.OpenGraph.Description = post.Meta.MetaDescription;
 
                 await _postsRepository.InsertOneAsync(post);
 
@@ -147,6 +149,7 @@ namespace api.Controllers
 
                 postIn.ResponsiveImgs = image.ResponsiveUrls;
                 image.UsedInPost = postIn;
+                postIn.Meta.OpenGraph.Title = postIn.Title;
                 await _imageRepository.ReplaceOneAsync(image);
 
 
@@ -155,8 +158,9 @@ namespace api.Controllers
 
             var sanitizedBody = sanitizer.Sanitize(postIn.Body);
             postIn.Body = sanitizedBody;
-            postIn.Created = post.Created;
-
+            postIn.UpdatedAt = DateTime.UtcNow;
+            postIn.Meta.OpenGraph.Description = postIn.Meta.MetaDescription;
+            postIn.Meta.OpenGraph.Title = postIn.Title;
 
             await _postsRepository.ReplaceOneAsync(postIn);
 

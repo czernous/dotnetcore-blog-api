@@ -31,7 +31,6 @@ namespace api.Models
         [BsonRequired]
         [Required]
         public SeoData Meta { get; set; }
-
         public bool isPublished { get; set; } = false;
 
         [BsonRequired]
@@ -39,9 +38,6 @@ namespace api.Models
         public string Body { get; set; }
 
         [BsonDateTimeOptions]
-        public DateTime Created { get; set; }
-
-        [BsonDateTimeOptions]
-        public DateTime Updated { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

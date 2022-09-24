@@ -28,6 +28,6 @@ namespace api.Models
         public Post UsedInPost { get; set; }
         public List<string> ResponsiveUrls { get; set; }
         public string Path { get; set; }
-        public DateTime Created { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

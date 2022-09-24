@@ -168,7 +168,6 @@ namespace api.Controllers
             CldImage imageData = new CldImage
             {
                 Bytes = (int)result.Bytes,
-                Created = DateTime.Now,
                 Format = result.Format,
                 Height = result.Height,
                 Path = result.Url.AbsolutePath,
@@ -208,7 +207,7 @@ namespace api.Controllers
 
             if (image == null) return NotFound();
 
-            var postsFilter = Builders<Post>.Filter.Eq("ImageUrl", image.Url);
+            var postsFilter = Builders<Post>.Filter.Eq("ImageUrl", image.SecureUrl);
 
             var post = _postsRepository.FindOne(postsFilter);
 
