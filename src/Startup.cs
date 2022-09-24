@@ -9,13 +9,13 @@ using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Options;
 using CloudinaryDotNet;
 using api.Models;
-using api.Services;
 using api.Interfaces;
+using api.Db;
 using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore.HttpOverrides;
 
-#pragma warning disable 1591 
+#pragma warning disable 1591
 
 namespace api
 {
@@ -68,13 +68,7 @@ namespace api
             {
                 throw new ArgumentException("Please specify Cloudinary account details!");
             }
-
-            services.AddSingleton<IMongoService, MongoService>();
-            services.AddSingleton<DbCrudService<IEntityBase>>();
-            services.AddSingleton<PostService>();
-            services.AddSingleton<CategoryService>();
-            services.AddSingleton<SubscriberService>();
-            services.AddSingleton<ImageService>();
+            services.AddSingleton(typeof(IMongoRepository<>), typeof(MongoRepository<>));
             services.AddSingleton(new Cloudinary(new Account(cloudinaryName, cloudinaryKey, cloudinarySecret)));
             services.AddControllers();
             services.AddSwaggerGen(c =>

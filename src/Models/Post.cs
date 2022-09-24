@@ -1,4 +1,5 @@
 using api.Interfaces;
+using api.Attributes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
@@ -8,11 +9,10 @@ using System.ComponentModel.DataAnnotations;
 namespace api.Models
 {
 #pragma warning disable 1591
-    public class Post : IEntityBase
+
+    [BsonCollection("Posts")]
+    public class Post : Document
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
 
         [BsonElement("Title")]
         [BsonRequired]
@@ -20,13 +20,13 @@ namespace api.Models
         [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
         public string Title { get; set; }
 
-        public List<Category> Categories { get; set; }
+        public IEnumerable<Category> Categories { get; set; }
 
         [BsonRequired]
         [Required]
         public string ImageUrl { get; set; }
 
-        public List<string> ResponsiveImgs { get; set; }
+        public IEnumerable<string> ResponsiveImgs { get; set; }
 
         [BsonRequired]
         [Required]

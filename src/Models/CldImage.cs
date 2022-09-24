@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
 using api.Interfaces;
+using api.Attributes;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace api.Models
 {
 #pragma warning disable 1591
-    public class CldImage : IEntityBase
+
+    [BsonCollection("Images")]
+    public class CldImage : Document
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
         public string Name { get; set; }
         public string PublicId { get; set; }
         public int Version { get; set; }

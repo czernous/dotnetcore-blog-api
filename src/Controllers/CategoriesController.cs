@@ -1,11 +1,16 @@
 using api.Models;
-using api.Services;
+using api.Filters;
+using api.Db;
+using api.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using api.Filters;
+using System.Linq;
+using System;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
+using MongoDB.Bson;
 
-#pragma warning disable 1591 
+#pragma warning disable 1591
 
 namespace api.Controllers
 {
@@ -16,23 +21,26 @@ namespace api.Controllers
     {
 
 
-        private readonly CategoryService _categoryService;
-        private readonly PostService _postService;
+        private readonly IMongoRepository<Category> _categoriesRepository;
+        private readonly IMongoRepository<Post> _postsRepository;
 
-        public CategoriesController(CategoryService categoryService, PostService postService)
+        public CategoriesController(
+            IMongoRepository<Category> categoriesRepository,
+            IMongoRepository<Post> postsRepository)
         {
-            _categoryService = categoryService;
-            _postService = postService;
+            _categoriesRepository = categoriesRepository;
+            _postsRepository = postsRepository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Category>>> Get() =>
-            await _categoryService.GetAllAsync();
+        public IEnumerable<Category> Get() => _categoriesRepository.FilterBy(Id => true);
+
+
 
         [HttpGet("{id:length(24)}", Name = "GetCategory")]
         public ActionResult<Category> Get(string id)
         {
-            var category = _categoryService.GetById(id);
+            var category = _categoriesRepository.FindById(id);
 
             if (category == null) return NotFound();
 
@@ -40,17 +48,20 @@ namespace api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Category>> CreateOne(Category category)
+        public ActionResult<Category> CreateOne(Category category)
         {
             if (ModelState.IsValid)
             {
-                var foundCategory = await _categoryService.GetByNameAsync(category.Name);
 
-                if (foundCategory != null) return BadRequest("This category already exists");
+                var categoryFilter = Builders<Category>.Filter.Eq("Name", category.Name);
 
-                await _categoryService.CreateAsync(category);
+                var foundCategory = _categoriesRepository.FindOne(categoryFilter);
 
-                return CreatedAtRoute("GetCategory", new { id = category.Id.ToString() }, category);
+                if (foundCategory != null) return BadRequest("This category already exists") as BadRequestObjectResult;
+
+                _categoriesRepository.InsertOne(category);
+
+                return CreatedAtRoute("GetCategory", new { id = category._id }, category);
             }
             else
             {
@@ -59,16 +70,27 @@ namespace api.Controllers
         }
 
         [HttpPut("{id:length(24)}")]
-        public async Task<IActionResult> Update(string id, Category categoryIn)
+        public async Task<ActionResult<Category>> Update(string id, Category categoryIn)
         {
-            var category = _categoryService.GetById(id);
+            var category = _categoriesRepository.FindById(id);
 
             if (category == null) return NotFound();
 
-            categoryIn.Id = id;
+            categoryIn.Id = new ObjectId(id);
 
-            await _postService.UpdMatchingCatAsync(category, categoryIn);
-            await _categoryService.UpdateAsync(id, categoryIn);
+            var categoryFilter = Builders<Category>.Filter.Eq("Name", categoryIn.Name);
+            var foundCategory = _categoriesRepository.FindOne(categoryFilter);
+
+            if (foundCategory != null) return BadRequest("This category already exists") as BadRequestObjectResult;
+
+            var postsFilter = Builders<Post>.Filter.AnyEq("Categories", category);
+            var postsUpdate = Builders<Post>.Update.Set("Categories.$[].Name", categoryIn.Name);
+
+            await _postsRepository.ReplaceManyAsync(postsFilter, postsUpdate);
+
+
+
+            await _categoriesRepository.ReplaceOneAsync(categoryIn);
 
             return NoContent();
         }
@@ -76,12 +98,15 @@ namespace api.Controllers
         [HttpDelete("{id:Length(24)}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var category = _categoryService.GetById(id);
+            var category = _categoriesRepository.FindById(id);
 
             if (category == null) return NotFound();
 
-            await _categoryService.RemoveAsync(category.Id);
-            await _postService.DelMatchingCatAsync(category);
+            var postsFilter = Builders<Post>.Filter.AnyEq("Categories", category);
+            var postsUpdate = Builders<Post>.Update.Pull("Categories", category);
+
+            _categoriesRepository.DeleteById(category.Id.ToString());
+            await _postsRepository.ReplaceManyAsync(postsFilter, postsUpdate);
 
             return NoContent();
         }

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Linq.Expressions;
 using api.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,8 +11,10 @@ using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Newtonsoft.Json.Linq;
 using api.Models;
-using api.Services;
+using api.Interfaces;
 using api.Utils;
+using api.Db;
+using MongoDB.Driver;
 
 #pragma warning disable 1591
 
@@ -24,16 +28,16 @@ namespace api.Controllers
     {
 
         private readonly Cloudinary _cloudinary;
-        private readonly ImageService _imageService;
-        private readonly PostService _postService;
+        private readonly IMongoRepository<CldImage> _imageRepository;
+        private readonly IMongoRepository<Post> _postsRepository;
         private readonly ImageUtils _imageUtils;
 
         /// Images controller
-        public ImagesController(Cloudinary cloudinary, ImageService imageService, PostService postService)
+        public ImagesController(Cloudinary cloudinary, IMongoRepository<CldImage> imageRepository, IMongoRepository<Post> postsRepository)
         {
             _imageUtils = new ImageUtils(cloudinary);
-            _imageService = imageService;
-            _postService = postService;
+            _imageRepository = imageRepository;
+            _postsRepository = postsRepository;
             _cloudinary = cloudinary;
         }
 
@@ -55,13 +59,12 @@ namespace api.Controllers
         //     return _imageUtils.GenerateUrlList(resolutions, quality, path, fileName);
         // }
         [HttpGet]
-        public async Task<ActionResult<List<CldImage>>> Get() =>
-            await _imageService.GetAllAsync();
+        public IEnumerable<CldImage> Get() => _imageRepository.FilterBy(Id => true);
 
         [HttpGet("{id:length(24)}", Name = "GetImage")]
         public ActionResult<CldImage> Get(string id)
         {
-            var image = _imageService.GetById(id);
+            var image = _imageRepository.FindById(id);
 
             if (image == null) return NotFound();
 
@@ -93,6 +96,7 @@ namespace api.Controllers
         [HttpPost]
         public async Task<ActionResult> UploadFile(IFormFile file)
         {
+            if (file == null) return BadRequest("The file you are uploading is null, make sure that the form name is 'file'");
 
             if (file.ContentType.ToLower() != "image/jpeg" &&
                 file.ContentType.ToLower() != "image/jpg" &&
@@ -107,8 +111,10 @@ namespace api.Controllers
             var cloudinaryFileName = Request.Query["filename"];
             var cloudinaryStorageFolder = Request.Query["folder"];
 
+            var imageFilter = Builders<CldImage>.Filter.Eq("Name", cloudinaryFileName);
+
             // check if image exists in the DB
-            var foundImage = await _imageService.GetByNameAsync(cloudinaryFileName);
+            var foundImage = _imageRepository.FindOne(imageFilter);
             if (foundImage != null) return BadRequest($"The image with filename '{cloudinaryFileName}' already exists.\nPlease Choose a different name.");
 
 
@@ -184,7 +190,7 @@ namespace api.Controllers
             if (ModelState.IsValid)
             {
 
-                await _imageService.CreateAsync(imageData);
+                await _imageRepository.InsertOneAsync(imageData);
 
                 return CreatedAtRoute("GetCategory", new { id = imageData.Id.ToString() }, image);
             }
@@ -198,23 +204,26 @@ namespace api.Controllers
         [HttpDelete("{id:Length(24)}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var image = _imageService.GetById(id);
+            var image = _imageRepository.FindById(id);
 
             if (image == null) return NotFound();
 
-            var post = await _postService.GetOneByImage(image);
+            var postsFilter = Builders<Post>.Filter.Eq("ImageUrl", image.Url);
+
+            var post = _postsRepository.FindOne(postsFilter);
 
             if (post != null)
             {
                 post.ImageUrl = null;
+                post.Meta.OpenGraph.ImageUrl = null;
                 post.ResponsiveImgs = null;
 
                 Post updatedPost = post as Post;
 
-                await _postService.UpdateAsync(post.Id, updatedPost);
+                await _postsRepository.ReplaceOneAsync(updatedPost);
             }
 
-            await _imageService.RemoveAsync(image.Id);
+            await _imageRepository.DeleteByIdAsync(image.Id.ToString());
 
             var delResParams = new DelResParams()
             {

@@ -1,12 +1,16 @@
 using System;
 using api.Models;
-using api.Services;
+using api.Db;
+using api.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Ganss.XSS;
 using api.Filters;
+using MongoDB.Driver;
+using MongoDB.Bson;
 
 #pragma warning disable 1591 
 
@@ -17,27 +21,30 @@ namespace api.Controllers
     [ApiKeyAuth]
     public class PostsController : ControllerBase
     {
-        private readonly PostService _postService;
-        private readonly CategoryService _categoryService;
+        private readonly IMongoRepository<Category> _categoriesRepository;
+        private readonly IMongoRepository<Post> _postsRepository;
+        private readonly IMongoRepository<CldImage> _imageRepository;
 
-        private readonly ImageService _imageService;
-
-        public PostsController(PostService postService, CategoryService categoryService, ImageService imageService)
+        public PostsController(
+            IMongoRepository<CldImage> imageRepository,
+            IMongoRepository<Category> categoriesRepository,
+            IMongoRepository<Post> postsRepository)
         {
-            _postService = postService;
-            _categoryService = categoryService;
-            _imageService = imageService;
+            _imageRepository = imageRepository;
+            _categoriesRepository = categoriesRepository;
+            _postsRepository = postsRepository;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Post>>> Get() =>
-            await _postService.GetAllAsync();
+        public IEnumerable<Post> Get() =>
+          _postsRepository.FilterBy(Id => true);
+
         // TODO: ADD INMEMORY OR DISTRIBUTED CACHE TO CACHE GET REQUESTS AND UPDATE CACHE ON PUT/POST
 
         [HttpGet("{id:length(24)}", Name = "GetPost")]
         public ActionResult<Post> Get(string id)
         {
-            var post = _postService.GetById(id);
+            Post post = _postsRepository.FindById(id);
 
             if (post == null) return NotFound();
 
@@ -52,23 +59,33 @@ namespace api.Controllers
             {
                 if (post.Categories != null)
                 {
-                    var existingCateories = await _categoryService.GetAllAsync();
+                    var existingCategories = _categoriesRepository.FilterBy(Id => true);
+                    List<Category> postCategories = post.Categories.ToList();
                     // find category name by ID and add to list
-                    foreach (var c in post.Categories.ToList())
+                    foreach (var c in postCategories)
                     {
-                        existingCateories.ForEach(foundCategory => { if (foundCategory.Name == c.Name) c.Id = foundCategory.Id; });
-                        if (c.Id == null) post.Categories.Remove(c);
+
+                        foreach (var foundCategory in existingCategories)
+                        {
+                            if (foundCategory.Name == c.Name) c.Id = foundCategory.Id;
+                        }
+
+                        if (c._id == null) postCategories.Remove(c);
                     }
                 }
 
+                var postsFilter = Builders<Post>.Filter.Eq("Title", post.Title);
 
-                var existingPosts = await _postService.GetOneByTitleAsync(post.Title);
+                var existingPosts = _postsRepository.FindOne(postsFilter);
 
                 if (existingPosts != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
 
                 if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
 
-                CldImage image = await _imageService.GetByUrlAsync(post.ImageUrl);
+                var imageFilter = Builders<CldImage>.Filter.Eq("ImageUrl", post.ImageUrl);
+
+                CldImage image = _imageRepository.FindOne(imageFilter);
+
                 if (image == null) return BadRequest("The image link must come from Cloudinary. Please use /images to upload an image to Cloudinary and use the link provided");
                 post.ResponsiveImgs = image.ResponsiveUrls;
                 image.UsedInPost = post;
@@ -80,7 +97,7 @@ namespace api.Controllers
 
                 post.Body = sanitizedBody;
 
-                await _postService.CreateAsync(post);
+                await _postsRepository.InsertOneAsync(post);
 
                 return CreatedAtRoute("GetPost", new { id = post.Id.ToString() }, post);
             }
@@ -91,9 +108,9 @@ namespace api.Controllers
         }
 
         [HttpPut("{id:length(24)}")]
-        public async Task<ActionResult<Post>> Update(string id, Post postIn)
+        public async Task<IActionResult> Update(string id, Post postIn)
         {
-            var post = _postService.GetById(id);
+            var post = _postsRepository.FindById(id);
             var sanitizer = new HtmlSanitizer();
 
             if (post == null) return NotFound();
@@ -101,28 +118,37 @@ namespace api.Controllers
             if (postIn.Categories != null)
             {
 
-                var existingCateories = await _categoryService.GetAllAsync();
-                foreach (var c in postIn.Categories.ToList())
+                var existingCateories = _categoriesRepository.FilterBy(Id => true);
+                List<Category> postInCategories = postIn.Categories.ToList();
+                foreach (var c in postInCategories)
                 {
-                    existingCateories.ForEach(foundCategory => { if (foundCategory.Name == c.Name) c.Id = foundCategory.Id; });
 
-                    if (c.Id == null) postIn.Categories.Remove(c);
+                    foreach (var foundCategory in existingCateories)
+                    {
+                        if (foundCategory.Name == c.Name) c.Id = foundCategory.Id;
+                    }
+
+
+                    if (c._id == null) postInCategories.Remove(c);
                 }
             }
 
             // add id to post object
-            postIn.Id = id;
+            postIn.Id = new ObjectId(id);
 
             if (postIn.ImageUrl != null && postIn.ImageUrl != post.ImageUrl)
             {
                 // Update image urls if new image url is provided
-                CldImage image = await _imageService.GetByUrlAsync(postIn.ImageUrl);
+                var imageFilter = Builders<CldImage>.Filter.Eq("ImageUrl", post.ImageUrl);
+
+                CldImage image = _imageRepository.FindOne(imageFilter);
 
                 if (image == null) return BadRequest("ImageUrl in the Post object is invalid or not found in the database");
 
                 postIn.ResponsiveImgs = image.ResponsiveUrls;
                 image.UsedInPost = postIn;
-                await _imageService.UpdateAsync(image.Id, image);
+                await _imageRepository.ReplaceOneAsync(image);
+
 
             }
 
@@ -131,19 +157,22 @@ namespace api.Controllers
             postIn.Body = sanitizedBody;
             postIn.Created = post.Created;
 
-            await _postService.UpdateAsync(id, postIn);
+
+            await _postsRepository.ReplaceOneAsync(postIn);
 
             return NoContent();
         }
 
         [HttpDelete("{id:Length(24)}")]
-        public async Task<IActionResult> Delete(string id)
+        public IActionResult Delete(string id)
         {
-            var post = _postService.GetById(id);
+            var post = _postsRepository.FindById(id);
 
             if (post == null) return NotFound();
 
-            await _postService.RemoveAsync(post.Id);
+            var deletedPost = post.Id.ToString();
+
+            _postsRepository.DeleteById(deletedPost);
 
             return NoContent();
         }

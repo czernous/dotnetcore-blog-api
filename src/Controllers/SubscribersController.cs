@@ -1,12 +1,15 @@
 using api.Models;
-using api.Services;
+using api.Interfaces;
 using api.Utils;
+using api.Filters;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using api.Filters;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections;
+using MongoDB.Driver;
+using MongoDB.Bson;
 
-#pragma warning disable 1591 
+#pragma warning disable 1591
 
 namespace api.Controllers
 {
@@ -17,19 +20,18 @@ namespace api.Controllers
     {
 
 
-        private readonly SubscriberService _subscriberService;
+        private readonly IMongoRepository<Subscriber> _subscribersRepository;
 
-        public SubscribersController(SubscriberService subscriberService) =>
-         _subscriberService = subscriberService;
+        public SubscribersController(IMongoRepository<Subscriber> subscribersRepository) =>
+         _subscribersRepository = subscribersRepository;
 
         [HttpGet]
-        public async Task<ActionResult<List<Subscriber>>> Get() =>
-            await _subscriberService.GetAllAsync();
+        public IEnumerable<Subscriber> Get() => _subscribersRepository.FilterBy(Id => true);
 
         [HttpGet("{id:length(24)}", Name = "GetSubscriber")]
         public ActionResult<Subscriber> Get(string id)
         {
-            var subscriber = _subscriberService.GetById(id);
+            var subscriber = _subscribersRepository.FindById(id);
 
             if (subscriber == null) return NotFound();
 
@@ -41,12 +43,14 @@ namespace api.Controllers
         {
             if (ModelState.IsValid)
             {
-                var foundSub = await _subscriberService.GetByEmailAsync(subscriber.Email);
+                var subscriberFilter = Builders<Subscriber>.Filter.Eq("Name", subscriber.Email);
+
+                var foundSub = _subscribersRepository.FindOne(subscriberFilter);
 
                 if (foundSub != null) return BadRequest("A subscriber with this email address already exists");
                 if (!RegexUtils.IsValidEmail(subscriber.Email)) return BadRequest("Provided email address is not valid");
 
-                await _subscriberService.CreateAsync(subscriber);
+                await _subscribersRepository.InsertOneAsync(subscriber);
 
                 return CreatedAtRoute("GetSubscriber", new { id = subscriber.Id.ToString() }, subscriber);
             }
@@ -59,15 +63,15 @@ namespace api.Controllers
         [HttpPut("{id:length(24)}")]
         public async Task<IActionResult> Update(string id, Subscriber subscriberIn)
         {
-            var subscriber = _subscriberService.GetById(id);
+            var subscriber = _subscribersRepository.FindById(id);
 
             if (subscriber == null) return NotFound();
 
             if (!RegexUtils.IsValidEmail(subscriberIn.Email)) return BadRequest("Provided email address is not valid");
 
-            subscriberIn.Id = id;
+            subscriberIn.Id = new ObjectId(id);
 
-            await _subscriberService.UpdateAsync(id, subscriberIn);
+            await _subscribersRepository.ReplaceOneAsync(subscriberIn);
 
             return NoContent();
         }
@@ -75,11 +79,11 @@ namespace api.Controllers
         [HttpDelete("{id:Length(24)}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var subscriber = _subscriberService.GetById(id);
+            var subscriber = _subscribersRepository.FindById(id);
 
             if (subscriber == null) return NotFound();
 
-            await _subscriberService.RemoveAsync(subscriber.Id);
+            await _subscribersRepository.DeleteByIdAsync(subscriber.Id.ToString());
 
             return NoContent();
         }

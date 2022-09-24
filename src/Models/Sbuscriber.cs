@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using api.Interfaces;
+using api.Attributes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -8,11 +9,9 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace api.Models
 {
-    public class Subscriber : IEntityBase
+    [BsonCollection("Subscribers")]
+    public class Subscriber : Document
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; }
 
         [Required]
         [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
