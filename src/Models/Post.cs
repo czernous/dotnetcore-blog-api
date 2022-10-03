@@ -26,7 +26,7 @@ namespace api.Models
         [Required]
         public string ImageUrl { get; set; }
 
-        public IEnumerable<string> ResponsiveImgs { get; set; }
+        public IEnumerable<ResponsiveUrl> ResponsiveImgs { get; set; }
 
         [BsonRequired]
         [Required]

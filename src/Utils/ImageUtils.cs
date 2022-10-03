@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using api.Models;
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Http;
 
@@ -64,13 +65,15 @@ namespace api.Utils
         /// <param name="quality"></param>
         /// <param name="path"></param>
         /// <param name="fileName"></param>
+        /// <param name="blurAmount">Blur amount added to the image (0 default)</param>
         /// <returns>A link to Cloudinary image</returns>
-        public string GenerateCloudinaryLink(int width, int quality, string path, string fileName)
+        public string GenerateCloudinaryLink(int width, int quality, string path, string fileName, int? blurAmount)
         {
             return _cloudinary.Api.UrlImgUp.Transform(
                 new Transformation()
                     .Quality(quality)
                     .Width(width)
+                    .Effect($"blur:{blurAmount ?? 0}")
                     .Crop("limit")
             ).BuildUrl(path + "/" + fileName);
         }
@@ -78,16 +81,16 @@ namespace api.Utils
         /// <summary>
         /// Generates Cloudinary responsive image link (Suitable if Client app uses Cloudinary Library)
         /// </summary>
-        /// <param name="cloudnaryFilePath"></param>
+        /// <param name="cloudinaryFilePath"></param>
         /// <returns>Cloudinary Responsive URL</returns>
-        public string GenerateResponsiveImage(string cloudnaryFilePath)
+        public string GenerateResponsiveImage(string cloudinaryFilePath)
         {
             return _cloudinary.Api.UrlImgUp.Transform(
                 new Transformation()
                     .Width("auto")
                     .Dpr("auto")
                     .Crop("scale")
-            ).BuildUrl($"{cloudnaryFilePath}jpg");
+            ).BuildUrl($"{cloudinaryFilePath}jpg");
         }
 
         /// <summary>
@@ -98,17 +101,17 @@ namespace api.Utils
         /// <param name="path"></param>
         /// <param name="fileName"></param>
         /// <returns>A list of responsive Cloudinary links</returns>
-        public List<string> GenerateUrlList(List<int> resolutions, int quality, string path, string fileName)
+        public List<ResponsiveUrl> GenerateUrlList(List<int> resolutions, int quality, string path, string fileName)
         {
 
-            List<string> responsiveUrls = new();
+            List<ResponsiveUrl> responsiveUrls = new();
             if (String.IsNullOrEmpty(fileName) || String.IsNullOrEmpty(path)) return responsiveUrls;
             foreach (int resolution in resolutions)
             {
-                var link = GenerateCloudinaryLink(resolution, quality, path, fileName);
+                var link = GenerateCloudinaryLink(resolution, quality, path, fileName, 0);
                 if (!String.IsNullOrWhiteSpace(link))
                 {
-                    responsiveUrls.Add(link);
+                    responsiveUrls.Add(new ResponsiveUrl { Width = resolution, Url = link });
                 }
             }
 

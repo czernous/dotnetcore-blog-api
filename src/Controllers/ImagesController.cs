@@ -180,6 +180,8 @@ namespace api.Controllers
                 Url = result.Url.AbsoluteUri,
                 UsedInPost = null,
                 ResponsiveUrls = urlList,
+                ThumbnailUrl = _imageUtils.GenerateCloudinaryLink(250, 70, cloudinaryStorageFolder, cloudinaryFileName, 0),
+                BlurredImageUrl = _imageUtils.GenerateCloudinaryLink(150, 50, cloudinaryStorageFolder, cloudinaryFileName, 70),
                 Version = int.Parse(result.Version),
                 Width = result.Width
             };

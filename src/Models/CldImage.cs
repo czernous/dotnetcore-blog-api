@@ -26,8 +26,11 @@ namespace api.Models
         public string Url { get; set; }
         public string SecureUrl { get; set; }
         public Post UsedInPost { get; set; }
-        public List<string> ResponsiveUrls { get; set; }
+        public List<ResponsiveUrl> ResponsiveUrls { get; set; }
+        public string ThumbnailUrl { get; set; }
+        public string BlurredImageUrl { get; set; }
         public string Path { get; set; }
+        public string AltText { get; set; } = string.Empty;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }
