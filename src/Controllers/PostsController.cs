@@ -51,8 +51,6 @@ namespace api.Controllers
 
         }
 
-        // TODO: ADD INMEMORY OR DISTRIBUTED CACHE TO CACHE GET REQUESTS AND UPDATE CACHE ON PUT/POST
-
         [HttpGet("{id:length(24)}", Name = "GetPost")]
         public ActionResult<Post> Get(string id)
         {
