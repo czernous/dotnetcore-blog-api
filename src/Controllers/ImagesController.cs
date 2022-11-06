@@ -63,8 +63,15 @@ namespace api.Controllers
         /// <returns>Void</returns>
 
         /// <remarks>
-        /// The end point accepts "filename" and "folder" query string params as well as "widths" and "q" (quality)
+        /// The end point accepts "filename" and "folder" query string params as well as "max-width", "widths" and "q" (quality)
         /// 
+        /// If the "widths" and "q" params are not passed, they default to:
+        /// 
+        /// max-width=2400 - accepts ints between 0 and 9999
+        /// 
+        /// widths=512,718,1024,1280 - note the param only accepts comma separated ints
+        /// 
+        /// q=70 - accepts ints between 0 and 100
         /// 
         /// The process:
         ///
@@ -87,21 +94,27 @@ namespace api.Controllers
             // comma separated ints regex = ^[0-9]{1,4},?([0-9]{1,4},?)*$
 
             string widths = Request.Query["widths"];
+            string maxWidth = Request.Query["max-width"];
             string quality = Request.Query["q"];
 
             string widthsPattern = @"^[0-9]{1,4},?([0-9]{1,4},?)*$";
             string qualityPattern = @"[0-9]{1,3}$";
+            string maxWidthPattern = @"[0-9]{1,4}$";
 
             bool isCommaSeparatedInts = widths != null && Regex.IsMatch(widths, widthsPattern);
             bool isQualityInt = quality != null && Regex.IsMatch(quality, qualityPattern);
+            bool isMaxWidthInt = maxWidth != null && Regex.IsMatch(maxWidth, maxWidthPattern);
 
-            int qualityInt = quality != null && isQualityInt ? Int32.Parse(quality) : 70;
+            int qualityInt = quality != null && isQualityInt ? Int16.Parse(quality) : 70;
+            int maxWidthInt = maxWidth != null && isMaxWidthInt ? Int16.Parse(maxWidth) : 2400;
 
             if (widths != null && !isCommaSeparatedInts) return BadRequest("Widths should be a list of comma separated ints");
             if (quality != null && !isQualityInt) return BadRequest("Quality (q) should be an int between 0 and 100");
 
             List<string> widthsList = widths != null ? widths?.Split(',')?.ToList() : null;
             List<int> widthsListInt = widthsList != null ? widthsList.Select(int.Parse).ToList() : new List<int>() { 512, 718, 1024, 1280 }; // use fallback values if null
+
+            Console.WriteLine(maxWidthInt);
 
             if (file == null) return BadRequest("The file you are uploading is null, make sure that the form name is 'file'");
 
@@ -121,6 +134,7 @@ namespace api.Controllers
 
             if (string.IsNullOrWhiteSpace(cloudinaryFileName)) return BadRequest("Please pass Cloudinary filename in the query string");
             if (string.IsNullOrWhiteSpace(cloudinaryStorageFolder)) return BadRequest("Please pass Cloudinary folder name / path in the query string");
+            if (maxWidth != null && !isMaxWidthInt) return BadRequest("Max-width should be an int between 0 and 9999");
 
             var imageFilter = Builders<CldImage>.Filter.Eq("Name", cloudinaryFileName);
 
@@ -136,7 +150,7 @@ namespace api.Controllers
             var (ms, fileStream, image) = await ImageUtils.CopyImageToMs(file);
 
 
-            var newImage = ImageUtils.ResizeImage(image, fileName, 2400);
+            var newImage = ImageUtils.ResizeImage(image, fileName, maxWidthInt);
             var imageFormat = file.ContentType.Replace("image/", "");
 
             ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
