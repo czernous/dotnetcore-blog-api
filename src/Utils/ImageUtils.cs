@@ -90,7 +90,7 @@ namespace api.Utils
                     .Width("auto")
                     .Dpr("auto")
                     .Crop("scale")
-            ).BuildUrl($"{cloudinaryFilePath}jpg");
+            ).BuildUrl($"{cloudinaryFilePath}");
         }
 
         /// <summary>
