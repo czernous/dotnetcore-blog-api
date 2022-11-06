@@ -12,7 +12,7 @@ using api.Filters;
 using MongoDB.Driver;
 using MongoDB.Bson;
 
-#pragma warning disable 1591 
+#pragma warning disable 1591
 
 namespace api.Controllers
 {
@@ -36,8 +36,20 @@ namespace api.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<Post> Get() =>
-          _postsRepository.FilterBy(Id => true);
+        public IEnumerable<Post> Get()
+        {
+            string searchTerm = Request.Query["search"];
+            IEnumerable<Post> resultPosts = null;
+
+            if (string.IsNullOrEmpty(searchTerm)) resultPosts = _postsRepository.FilterBy(Id => true);
+
+            IEnumerable<Post> postsByTitle = _postsRepository.FilterBy(p => p.Title.ToLower().Contains(searchTerm.ToLower()));
+            IEnumerable<Post> postsByBody = _postsRepository.FilterBy(p => p.Body.ToLower().Contains(searchTerm.ToLower()));
+            resultPosts = postsByTitle.Count() > 0 ? postsByTitle : postsByBody;
+
+            return resultPosts; // returns empty list if no posts found
+
+        }
 
         // TODO: ADD INMEMORY OR DISTRIBUTED CACHE TO CACHE GET REQUESTS AND UPDATE CACHE ON PUT/POST
 
@@ -50,6 +62,8 @@ namespace api.Controllers
 
             return post;
         }
+
+
 
         [HttpPost]
         public async Task<ActionResult<Post>> Create(Post post)
