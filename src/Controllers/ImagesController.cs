@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using api.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -75,9 +76,12 @@ namespace api.Controllers
         /// <summary>
         /// Uploads image to cloudinary and save it's metadata(urls) to the database
         /// </summary>
+        /// <param name="search">String to search for in user IDs and names</param>
         /// <returns>Void</returns>
+
         /// <remarks>
-        /// The end point accepts "filename" and "folder" query string params
+        /// The end point accepts "filename" and "folder" query string params as well as "widths" and "q" (quality)
+        /// 
         /// 
         /// The process:
         ///
@@ -96,6 +100,26 @@ namespace api.Controllers
         [HttpPost]
         public async Task<ActionResult> UploadFile(IFormFile file)
         {
+
+            // comma separated ints regex = ^[0-9]{1,4},?([0-9]{1,4},?)*$
+
+            string widths = Request.Query["widths"];
+            string quality = Request.Query["q"];
+
+            string widthsPattern = @"^[0-9]{1,4},?([0-9]{1,4},?)*$";
+            string qualityPattern = @"[0-9]{1,3}$";
+
+            bool isCommaSeparatedInts = widths != null && Regex.IsMatch(widths, widthsPattern);
+            bool isQualityInt = quality != null && Regex.IsMatch(quality, qualityPattern);
+
+            int qualityInt = quality != null && isQualityInt ? Int32.Parse(quality) : 70;
+
+            if (widths != null && !isCommaSeparatedInts) return BadRequest("Widths should be a list of comma separated ints");
+            if (quality != null && !isQualityInt) return BadRequest("Quality (q) should be an int between 0 and 100");
+
+            List<string> widthsList = widths != null ? widths?.Split(',')?.ToList() : null;
+            List<int> widthsListInt = widthsList != null ? widthsList.Select(int.Parse).ToList() : new List<int>() { 512, 718, 1024, 1280 }; // use fallback values if null
+
             if (file == null) return BadRequest("The file you are uploading is null, make sure that the form name is 'file'");
 
             if (file.ContentType.ToLower() != "image/jpeg" &&
@@ -110,6 +134,10 @@ namespace api.Controllers
             // read asset(file) name and folder from query string
             var cloudinaryFileName = Request.Query["filename"];
             var cloudinaryStorageFolder = Request.Query["folder"];
+            // read widths / quality from query string
+
+            if (string.IsNullOrWhiteSpace(cloudinaryFileName)) return BadRequest("Please pass Cloudinary filename in the query string");
+            if (string.IsNullOrWhiteSpace(cloudinaryStorageFolder)) return BadRequest("Please pass Cloudinary folder name / path in the query string");
 
             var imageFilter = Builders<CldImage>.Filter.Eq("Name", cloudinaryFileName);
 
@@ -162,7 +190,7 @@ namespace api.Controllers
             }
 
             // create a list of resized image links
-            var urlList = _imageUtils.GenerateUrlList(new List<int>() { 512, 718, 1024, 1280 }, 70, cloudinaryStorageFolder, cloudinaryFileName);
+            var urlList = _imageUtils.GenerateUrlList(widthsListInt, qualityInt, cloudinaryStorageFolder, cloudinaryFileName);
 
             // create new image to save to DB
             CldImage imageData = new CldImage
