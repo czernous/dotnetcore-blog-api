@@ -42,23 +42,6 @@ namespace api.Controllers
             _cloudinary = cloudinary;
         }
 
-        /*
-        private static Image ResizeImage(Image image, string fileName, int maxWidth)
-        {
-            return ImageUtils.ResizeImage(image, fileName, maxWidth);
-        }
-*/
-
-
-        // private string GenerateResponsiveLink(int width, int quality, string path, string fileName)
-        // {
-        //     return _imageUtils.GenerateResponsiveLink(width, quality, path, fileName);
-        // }
-        //
-        // private List<string> GenerateUrlList(List<int> resolutions, int quality, string path, string fileName)
-        // {
-        //     return _imageUtils.GenerateUrlList(resolutions, quality, path, fileName);
-        // }
         [HttpGet]
         public IEnumerable<CldImage> Get() => _imageRepository.FilterBy(Id => true);
 
