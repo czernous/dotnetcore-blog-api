@@ -41,7 +41,7 @@ namespace api.Controllers
             string searchTerm = Request.Query["search"];
             IEnumerable<Post> resultPosts = null;
 
-            if (string.IsNullOrEmpty(searchTerm)) resultPosts = _postsRepository.FilterBy(Id => true);
+            if (string.IsNullOrEmpty(searchTerm)) return _postsRepository.FilterBy(Id => true);
 
             IEnumerable<Post> postsByTitle = _postsRepository.FilterBy(p => p.Title.ToLower().Contains(searchTerm.ToLower()));
             IEnumerable<Post> postsByBody = _postsRepository.FilterBy(p => p.Body.ToLower().Contains(searchTerm.ToLower()));

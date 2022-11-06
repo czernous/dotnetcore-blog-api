@@ -5,7 +5,7 @@ DO NOT UPDATE.
 
 Uploading images to Cloudinary and saving references to Mongo:
 
-upload -> https://localhost:5001/api/images?filename=test-image&folder=test-api-folder/test-images
+upload -> https://localhost:5001/api/images?filename=test-image&folder=test-api-folder/test-images&max-width=2400&widths=720,1280,1920&q=70
 
 The server expects an Api key passed in headers as ApiKey; It's value is defined in the .env file and picked up automatically.
 
