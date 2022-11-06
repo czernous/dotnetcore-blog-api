@@ -59,7 +59,6 @@ namespace api.Controllers
         /// <summary>
         /// Uploads image to cloudinary and save it's metadata(urls) to the database
         /// </summary>
-        /// <param name="search">String to search for in user IDs and names</param>
         /// <returns>Void</returns>
 
         /// <remarks>

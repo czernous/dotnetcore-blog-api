@@ -38,6 +38,7 @@ namespace api.Controllers
         [HttpGet]
         public IEnumerable<Post> Get()
         {
+            // TODO: implement pagination
             string searchTerm = Request.Query["search"];
             IEnumerable<Post> resultPosts = null;
 
