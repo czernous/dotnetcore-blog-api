@@ -13,7 +13,7 @@ RUN dotnet publish api.sln -c Release -o out
 WORKDIR /app/src
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 as runtime
+FROM mcr.microsoft.com/dotnet/aspnet:7.0 as runtime
 
 ENV ASPNETCORE_URLS=http://*:9000
 #ENV ASPNETCORE_ENVIRONMENT=”production”
