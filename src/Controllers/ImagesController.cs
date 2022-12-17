@@ -82,6 +82,8 @@ namespace api.Controllers
         ///   7. Otherwise it is uploaded to the specified folder with specified filename
         ///   8. A list of URLs with applied transformations(resized) is created
         ///   9. A new CldImage entity is created and saved to the database
+        ///   
+        /// example qs object:  http://fs-app.loc/backend/images?filename=test-image-3/<![CDATA[&]]>folder=test-api-folder/test-images/<![CDATA[&]]>max-width=2400<![CDATA[&]]>widths=512,768,1140,1920<![CDATA[&]]>q=70
         ///
         /// </remarks>
         /// <response code="200">If the image was uploaded</response>
