@@ -7,7 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Ganss.XSS;
+using Ganss.Xss;
 using api.Filters;
 using MongoDB.Driver;
 using MongoDB.Bson;
