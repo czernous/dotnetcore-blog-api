@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using api.Interfaces;
 using api.Attributes;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace api.Models
 {

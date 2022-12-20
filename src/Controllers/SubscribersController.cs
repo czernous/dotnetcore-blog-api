@@ -5,7 +5,6 @@ using api.Filters;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections;
 using MongoDB.Driver;
 using MongoDB.Bson;
 

@@ -1,11 +1,8 @@
 using api.Models;
 using api.Filters;
-using api.Db;
 using api.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
-using System;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using MongoDB.Bson;

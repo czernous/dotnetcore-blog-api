@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using api.Filters;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,6 @@ using Newtonsoft.Json.Linq;
 using api.Models;
 using api.Interfaces;
 using api.Utils;
-using api.Db;
 using MongoDB.Driver;
 
 #pragma warning disable 1591
