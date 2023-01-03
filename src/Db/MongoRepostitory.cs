@@ -8,6 +8,7 @@ using api.Attributes;
 using MongoDB.Driver;
 using MongoDB.Bson;
 using api.Models;
+using NuGet.DependencyResolver;
 
 
 #pragma warning disable 1591
@@ -47,6 +48,35 @@ namespace api.Db
             Expression<Func<TDocument, bool>> filterExpression)
         {
             return _collection.Find(filterExpression).ToEnumerable();
+        }
+
+        public virtual async Task<PagedData<TDocument>> FilterByAndPaginate(Expression<Func<TDocument, bool>> filterExpression, int? page, int? pageSize)
+        {
+
+
+            bool hasPagination = page != null && pageSize != null;
+
+
+            var totalDocuments = await _collection.CountDocumentsAsync(filterExpression);
+
+            var totalPages = hasPagination ? (int)Math.Ceiling((double)totalDocuments / (int)pageSize) : 0;
+
+            // Skip a certain number of documents based on the page number and page size
+            var documents = hasPagination ? await _collection.Find(filterExpression).Skip((page - 1) * pageSize).Limit(pageSize).ToListAsync() : _collection.Find(filterExpression).ToEnumerable();
+
+            // Return the paginated results and additional information in the response
+
+            var result = new PagedData<TDocument>
+            {
+                Data = documents,
+                HasPagination = hasPagination,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                TotalDocuments = totalDocuments
+            };
+
+            return result;
         }
 
         public virtual IEnumerable<TProjected> FilterBy<TProjected>(

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using api.Models;
 using MongoDB.Driver;
 
 #pragma warning disable 1591
@@ -15,6 +16,9 @@ namespace api.Interfaces
 
         IEnumerable<TDocument> FilterBy(
             Expression<Func<TDocument, bool>> filterExpression);
+
+        Task<PagedData<TDocument>> FilterByAndPaginate(
+            Expression<Func<TDocument, bool>> filterExpression, int? page, int? pageSize);
 
         IEnumerable<TProjected> FilterBy<TProjected>(
             Expression<Func<TDocument, bool>> filterExpression,

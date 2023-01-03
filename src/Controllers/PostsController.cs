@@ -34,17 +34,17 @@ namespace api.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<Post> Get()
+        public async Task<PagedData<Post>> Get(string? search, int? page, int? pageSize)
         {
             // TODO: implement pagination
-            string searchTerm = Request.Query["search"];
-            IEnumerable<Post> resultPosts = null;
 
-            if (string.IsNullOrEmpty(searchTerm)) return _postsRepository.FilterBy(Id => true);
+            PagedData<Post> resultPosts = null;
 
-            IEnumerable<Post> postsByTitle = _postsRepository.FilterBy(p => p.Title.ToLower().Contains(searchTerm.ToLower()));
-            IEnumerable<Post> postsByBody = _postsRepository.FilterBy(p => p.Body.ToLower().Contains(searchTerm.ToLower()));
-            resultPosts = postsByTitle.Count() > 0 ? postsByTitle : postsByBody;
+            if (string.IsNullOrEmpty(search)) return await _postsRepository.FilterByAndPaginate(Id => true, page, pageSize);
+
+            PagedData<Post> postsByTitle = await _postsRepository.FilterByAndPaginate(p => p.Title.ToLower().Contains(search.ToLower()), page, pageSize);
+
+            resultPosts = postsByTitle.Data.Count() > 0 ? postsByTitle : await _postsRepository.FilterByAndPaginate(p => p.Body.ToLower().Contains(search.ToLower()), page, pageSize);
 
             return resultPosts; // returns empty list if no posts found
 
