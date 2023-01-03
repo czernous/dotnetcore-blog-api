@@ -50,7 +50,7 @@ namespace api.Db
             return _collection.Find(filterExpression).ToEnumerable();
         }
 
-        public virtual async Task<PagedData<TDocument>> FilterByAndPaginate(Expression<Func<TDocument, bool>> filterExpression, int? page, int? pageSize)
+        public virtual async Task<PagedData<TDocument>> FilterByAndPaginateAsync(Expression<Func<TDocument, bool>> filterExpression, int? page, int? pageSize)
         {
 
 

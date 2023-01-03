@@ -40,11 +40,11 @@ namespace api.Controllers
 
             PagedData<Post> resultPosts = null;
 
-            if (string.IsNullOrEmpty(search)) return await _postsRepository.FilterByAndPaginate(Id => true, page, pageSize);
+            if (string.IsNullOrEmpty(search)) return await _postsRepository.FilterByAndPaginateAsync(Id => true, page, pageSize);
 
-            PagedData<Post> postsByTitle = await _postsRepository.FilterByAndPaginate(p => p.Title.ToLower().Contains(search.ToLower()), page, pageSize);
+            PagedData<Post> postsByTitle = await _postsRepository.FilterByAndPaginateAsync(p => p.Title.ToLower().Contains(search.ToLower()), page, pageSize);
 
-            resultPosts = postsByTitle.Data.Count() > 0 ? postsByTitle : await _postsRepository.FilterByAndPaginate(p => p.Body.ToLower().Contains(search.ToLower()), page, pageSize);
+            resultPosts = postsByTitle.Data.Count() > 0 ? postsByTitle : await _postsRepository.FilterByAndPaginateAsync(p => p.Body.ToLower().Contains(search.ToLower()), page, pageSize);
 
             return resultPosts; // returns empty list if no posts found
 
@@ -62,7 +62,7 @@ namespace api.Controllers
 
 
 
-        [HttpPost]
+        [HttpPost(Name = "CreatePost")]
         public async Task<ActionResult<Post>> Create(Post post)
         {
 
@@ -112,7 +112,7 @@ namespace api.Controllers
 
                 await _postsRepository.InsertOneAsync(post);
 
-                return CreatedAtRoute("GetPost", new { id = post.Id.ToString() }, post);
+                return CreatedAtRoute("CreatePost", new { id = post.Id.ToString() }, post);
             }
             else
             {
