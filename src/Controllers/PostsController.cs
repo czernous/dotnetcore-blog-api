@@ -36,7 +36,6 @@ namespace api.Controllers
         [HttpGet]
         public async Task<PagedData<Post>> Get(string? search, int? page, int? pageSize)
         {
-            // TODO: implement pagination
 
             PagedData<Post> resultPosts = null;
 
