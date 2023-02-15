@@ -96,9 +96,11 @@ namespace api
                 app.UseForwardedHeaders();
             }
 
-            //app.UseForwardedHeaders();
+            app.UseForwardedHeaders();
 
-            //app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
+
+            app.UseHsts();
 
             app.UseRouting();
 
