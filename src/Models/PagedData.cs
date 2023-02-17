@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+#pragma warning disable 1591 
 namespace api.Models
 {
     public class PagedData<T>
