@@ -17,8 +17,6 @@ namespace api.Models
         [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
         public string Description { get; set; }
 
-        [BsonRequired]
-        [Required]
         [RegularExpression(@"(?s)^((?!<)(?!>).)*$", ErrorMessage = "This field cannot contain HTML tags")]
         public string ImageUrl { get; set; }
         public string Url { get; set; }

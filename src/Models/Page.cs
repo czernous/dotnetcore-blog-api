@@ -27,7 +27,7 @@ namespace api.Models
         [Required]
         public SeoData Meta { get; set; }
 
-        public CldImage? Image { get; set; }
+        public string? Image { get; set; }
 
         [BsonDateTimeOptions]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
