@@ -69,7 +69,7 @@ namespace api.Utils
         /// <returns>A link to Cloudinary image</returns>
         public string GenerateCloudinaryLink(int width, int quality, string path, string fileName, int? blurAmount)
         {
-            return _cloudinary.Api.UrlImgUp.Transform(
+            return _cloudinary.Api.UrlImgUp.Secure(true).Transform(
                 new Transformation()
                     .Quality(quality)
                     .Width(width)
@@ -85,11 +85,12 @@ namespace api.Utils
         /// <returns>Cloudinary Responsive URL</returns>
         public string GenerateResponsiveImage(string cloudinaryFilePath)
         {
-            return _cloudinary.Api.UrlImgUp.Transform(
+            return _cloudinary.Api.UrlImgUp.Secure(true).Transform(
                 new Transformation()
                     .Width("auto")
                     .Dpr("auto")
                     .Crop("scale")
+                    .FetchFormat("auto")
             ).BuildUrl($"{cloudinaryFilePath}");
         }
 
