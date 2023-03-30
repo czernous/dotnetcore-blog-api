@@ -24,27 +24,29 @@ namespace api
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-
         }
+
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders =
-                ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
             services.Configure<BlogDatabaseSettings>(
-            Configuration.GetSection(nameof(BlogDatabaseSettings)));
+                Configuration.GetSection(nameof(BlogDatabaseSettings))
+            );
             services.Configure<ApiSettings>(Configuration.GetSection(nameof(ApiSettings)));
 
-            services.AddSingleton<IBlogDatabaseSettings>(sp =>
-                sp.GetRequiredService<IOptions<BlogDatabaseSettings>>().Value);
-            services.AddSingleton<IApiSettings>(sp =>
-                sp.GetRequiredService<IOptions<ApiSettings>>().Value);
+            services.AddSingleton<IBlogDatabaseSettings>(
+                sp => sp.GetRequiredService<IOptions<BlogDatabaseSettings>>().Value
+            );
+            services.AddSingleton<IApiSettings>(
+                sp => sp.GetRequiredService<IOptions<ApiSettings>>().Value
+            );
             services.PostConfigure<BlogDatabaseSettings>(opts =>
             {
                 opts.ConnectionString = Environment.GetEnvironmentVariable("API_DB_URL");
@@ -63,13 +65,18 @@ namespace api
             var cloudinaryKey = Environment.GetEnvironmentVariable("CLOUDINARY_KEY");
             var cloudinarySecret = Environment.GetEnvironmentVariable("CLOUDINARY_SECRET");
 
-
-            if (new[] { cloudinaryName, cloudinaryKey, cloudinarySecret }.Any(string.IsNullOrWhiteSpace))
+            if (
+                new[] { cloudinaryName, cloudinaryKey, cloudinarySecret }.Any(
+                    string.IsNullOrWhiteSpace
+                )
+            )
             {
                 throw new ArgumentException("Please specify Cloudinary account details!");
             }
             services.AddSingleton(typeof(IMongoRepository<>), typeof(MongoRepository<>));
-            services.AddSingleton(new Cloudinary(new Account(cloudinaryName, cloudinaryKey, cloudinarySecret)));
+            services.AddSingleton(
+                new Cloudinary(new Account(cloudinaryName, cloudinaryKey, cloudinarySecret))
+            );
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
@@ -78,8 +85,6 @@ namespace api
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
             });
-
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -96,11 +101,11 @@ namespace api
                 app.UseForwardedHeaders();
             }
 
-            app.UseForwardedHeaders();
+            //app.UseForwardedHeaders();
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
-            app.UseHsts();
+            //app.UseHsts();
 
             app.UseRouting();
 

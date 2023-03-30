@@ -9,6 +9,7 @@ using Ganss.Xss;
 using api.Filters;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using System.Globalization;
 
 #pragma warning disable 1591
 
@@ -34,16 +35,29 @@ namespace api.Controllers
         }
 
         [HttpGet]
-        public async Task<PagedData<Post>> Get(string? search, int? page, int? pageSize)
+        public async Task<PagedData<Post>> Get(string? search, string? sortOrder, int? page, int? pageSize)
         {
 
             PagedData<Post> resultPosts = null;
 
-            if (string.IsNullOrEmpty(search)) return await _postsRepository.FilterByAndPaginateAsync(Id => true, page, pageSize);
+            var sortDefinition = sortOrder == "asc"
+                ? Builders<Post>.Sort.Ascending(p => p.Id)
+                : Builders<Post>.Sort.Descending(p => p.Id);
 
-            PagedData<Post> postsByTitle = await _postsRepository.FilterByAndPaginateAsync(p => p.Title.ToLower().Contains(search.ToLower()), page, pageSize);
+            if (string.IsNullOrEmpty(search))
+                return await _postsRepository.FilterByAndPaginateAsync(Id => true, sortDefinition, page, pageSize);
 
-            resultPosts = postsByTitle.Data.Count() > 0 ? postsByTitle : await _postsRepository.FilterByAndPaginateAsync(p => p.Body.ToLower().Contains(search.ToLower()), page, pageSize);
+            PagedData<Post> postsByTitle = await _postsRepository
+                .FilterByAndPaginateAsync(
+                    p => p.Title.ToLower().Contains(search.ToLower()), sortDefinition, page, pageSize
+                );
+
+            resultPosts = postsByTitle.Data.Count() > 0
+                ? postsByTitle
+                : await _postsRepository
+                    .FilterByAndPaginateAsync(
+                        p => p.Body.ToLower().Contains(search.ToLower()), sortDefinition, page, pageSize
+                    );
 
             return resultPosts; // returns empty list if no posts found
 
@@ -52,12 +66,26 @@ namespace api.Controllers
         [HttpGet("{id:length(24)}", Name = "GetPost")]
         public ActionResult<Post> Get(string id)
         {
-            Post post = _postsRepository.FindById(id);
+            if (!string.IsNullOrWhiteSpace(id) && ObjectId.TryParse(id, out _))
+            {
+                Post post = _postsRepository.FindById(id);
 
-            if (post == null) return NotFound();
+                if (post != null)
 
-            return post;
+                    return post;
+            }
+            return NotFound();
         }
+
+        [HttpGet("slug/{slug}", Name = "GetPostBySlug")]
+        public ActionResult<Post> GetBySlug(string slug)
+        {
+            var postFilter = Builders<Post>.Filter.Eq("Slug", slug);
+            Post postBySlug = _postsRepository.FindOne(postFilter);
+            if (postBySlug == null) return NotFound();
+            return postBySlug;
+        }
+
 
 
 
@@ -85,10 +113,14 @@ namespace api.Controllers
                 }
 
                 var postsFilter = Builders<Post>.Filter.Eq("Title", post.Title);
+                var postsFilterBySlug = Builders<Post>.Filter.Eq("Slug", post.Slug);
 
-                var existingPosts = _postsRepository.FindOne(postsFilter);
+                var existingPostWithTitle = _postsRepository.FindOne(postsFilter);
+                var existingPostWithSlug = _postsRepository.FindOne(postsFilterBySlug);
 
-                if (existingPosts != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
+                if (existingPostWithTitle != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
+
+                if (existingPostWithSlug != null) return BadRequest("The post with such slug already exists. Please make sure slugs are unique");
 
                 if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
 
@@ -98,6 +130,8 @@ namespace api.Controllers
 
                 if (image == null) return BadRequest("The image link must come from Cloudinary. Please use /images to upload an image to Cloudinary and use the link provided");
                 post.ResponsiveImgs = image.ResponsiveUrls;
+                post.BlurredImageUrl = image.BlurredImageUrl;
+                post.ImageAltText = image.Name;
                 image.UsedInPost = post;
 
                 // TODO: ADD USEDINPOST ATTRIBUTE TO IMAGE WHEN ADDED TO POST
@@ -148,16 +182,34 @@ namespace api.Controllers
             // add id to post object
             postIn.Id = new ObjectId(id);
 
-            if (postIn.ImageUrl != null && postIn.ImageUrl != post.ImageUrl)
+
+            if (postIn.Title != post.Title || postIn.Slug != post.Slug)
+            {
+                // check of post Title and Slug are unique if changed...probably need to dry it up a bit (copied from POST)
+                var postsFilter = Builders<Post>.Filter.Eq("Title", post.Title);
+                var postsFilterBySlug = Builders<Post>.Filter.Eq("Slug", post.Slug);
+
+                var existingPostWithTitle = _postsRepository.FindOne(postsFilter);
+                var existingPostWithSlug = _postsRepository.FindOne(postsFilterBySlug);
+
+                if (existingPostWithTitle != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
+
+                if (existingPostWithSlug != null) return BadRequest("The post with such slug already exists. Please make sure slugs are unique");
+
+            }
+
+            if (postIn.ImageUrl != null)
             {
                 // Update image urls if new image url is provided
-                var imageFilter = Builders<CldImage>.Filter.Eq("ImageUrl", post.ImageUrl);
+                var imageFilter = Builders<CldImage>.Filter.Eq("SecureUrl", post.ImageUrl);
 
                 CldImage image = _imageRepository.FindOne(imageFilter);
 
                 if (image == null) return BadRequest("ImageUrl in the Post object is invalid or not found in the database");
 
                 postIn.ResponsiveImgs = image.ResponsiveUrls;
+                postIn.BlurredImageUrl = image.BlurredImageUrl;
+                postIn.ImageAltText = image.Name;
                 image.UsedInPost = postIn;
                 postIn.Meta.OpenGraph.Title = postIn.Title;
                 await _imageRepository.ReplaceOneAsync(image);

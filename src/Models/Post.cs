@@ -21,18 +21,25 @@ namespace api.Models
 
         public IEnumerable<Category> Categories { get; set; }
 
-        [BsonRequired]
-        [Required]
+        [Required] // TODO: make optional and require on the frontend 
         public string ImageUrl { get; set; }
-
         public IEnumerable<ResponsiveUrl> ResponsiveImgs { get; set; }
 
-        [BsonRequired]
+        public string ImageAltText { get; set; }
+
+        public string BlurredImageUrl { get; set; }
+
+        [Required]
+        public string Slug { get; set; }
+
+        [Required]
+        [MaxLength(120)]
+        public string ShortDescription { get; set; }
+
         [Required]
         public SeoData Meta { get; set; }
         public bool isPublished { get; set; } = false;
 
-        [BsonRequired]
         [Required]
         public string Body { get; set; }
 

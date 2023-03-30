@@ -18,7 +18,7 @@ namespace api.Interfaces
             Expression<Func<TDocument, bool>> filterExpression);
 
         Task<PagedData<TDocument>> FilterByAndPaginateAsync(
-            Expression<Func<TDocument, bool>> filterExpression, int? page, int? pageSize);
+            Expression<Func<TDocument, bool>> filterExpression, SortDefinition<TDocument> sortDefinition, int? page, int? pageSize);
 
         IEnumerable<TProjected> FilterBy<TProjected>(
             Expression<Func<TDocument, bool>> filterExpression,
