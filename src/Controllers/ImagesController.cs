@@ -231,8 +231,15 @@ namespace api.Controllers
             if (post != null)
             {
                 post.ImageUrl = null;
-                post.Meta.OpenGraph.ImageUrl = null;
+
                 post.ResponsiveImgs = null;
+                post.ImageAltText = null;
+                post.BlurredImageUrl = null;
+
+                post.Meta.OpenGraph.ImageUrl =
+                    post.Meta.OpenGraph.ImageUrl == image.SecureUrl
+                        ? null
+                        : post.Meta.OpenGraph.ImageUrl;
 
                 Post updatedPost = post as Post;
 

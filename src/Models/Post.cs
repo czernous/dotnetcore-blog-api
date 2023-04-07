@@ -21,7 +21,6 @@ namespace api.Models
 
         public IEnumerable<Category> Categories { get; set; }
 
-        [Required] // TODO: make optional and require on the frontend 
         public string ImageUrl { get; set; }
         public IEnumerable<ResponsiveUrl> ResponsiveImgs { get; set; }
 
