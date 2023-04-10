@@ -1,25 +1,36 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0.202-alpine3.17 AS build
 WORKDIR /app
 
 # copy csproj file and restore
-COPY *.sln ./
 COPY src ./src
-COPY Tests ./Tests
-RUN dotnet restore
+RUN dotnet restore ./src/api.csproj --runtime alpine-x64
 
 # Copy everything else and build
+
 COPY . ./
-RUN dotnet publish api.sln -c Release -o out
+
+WORKDIR /app\
+    RUN dotnet publish "./src/api.csproj" -c Release -o out \
+    --no-restore \
+    --runtime alpine-x64 \
+    --self-contained true \
+    /p:PublishTrimmed=true \
+    /p:PublishSingleFile=true
 WORKDIR /app/src
 
+
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 as runtime
+FROM mcr.microsoft.com/dotnet/runtime-deps:7.0.4-alpine3.17 AS runtime
 
-ENV ASPNETCORE_URLS=http://*:9000
-#ENV ASPNETCORE_ENVIRONMENT=”production”
-#EXPOSE 9000
+RUN adduser --disabled-password \
+    --home /app \
+    --gecos '' dotnetuser && chown -R dotnetuser /app
 
-RUN apt-get update && apt-get install -y apt-utils libgdiplus libc6-dev
+# upgrade musl to remove potential vulnerability
+RUN apk upgrade musl
+
+USER dotnetuser
 
 COPY --from=build /app/out .
-ENTRYPOINT ["dotnet", "api.dll"] 
+
+ENTRYPOINT ["./api", "--urls", "http://*:9000"]
