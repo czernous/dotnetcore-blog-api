@@ -1,17 +1,19 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0.202-alpine3.17 AS build
+
+FROM mcr.microsoft.com/dotnet/sdk:7.0.202-bullseye-slim AS build
 WORKDIR /app
+
 
 # copy csproj file and restore
 COPY src ./src
 RUN dotnet restore ./src/api.csproj --runtime alpine-x64
 
+# removed Tests for now as it is empty. TODO: add test step before shipping to production
+
 # Copy everything else and build
 
-COPY . ./
-
-WORKDIR /app\
-    RUN dotnet publish "./src/api.csproj" -c Release -o out \
-    --no-restore \
+COPY . .
+RUN dotnet publish ./src -c Release -o out \
+    --no-restore true \
     --runtime alpine-x64 \
     --self-contained true \
     /p:PublishTrimmed=true \
@@ -28,6 +30,7 @@ RUN adduser --disabled-password \
 
 # upgrade musl to remove potential vulnerability
 RUN apk upgrade musl
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && apk update && apk add --no-cache libgdiplus
 
 USER dotnetuser
 
