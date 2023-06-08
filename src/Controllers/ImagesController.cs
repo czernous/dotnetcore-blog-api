@@ -136,14 +136,14 @@ namespace api.Controllers
             var (ms, fileStream, image) = await ImageUtils.CopyImageToMs(file);
 
 
-            var newImage = ImageUtils.ResizeImage(image, filename, maxWidthInt);
+            var newImage = ImageUtils.ResizeImage(image, maxWidthInt);
             var imageFormat = file.ContentType.Replace("image/", "");
 
             ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
 
             var value = await ImageUtils.ConvertMsToBytes(ms);
 
-            var b64ImageString = $"data:{file.ContentType};base64,{Convert.ToBase64String(value)}";
+            string b64ImageString = ImageUtils.GenerateBase64String(file.ContentType, value);
 
             // SAVE TO CLOUDINARY
             var results = new List<Dictionary<string, string>>();
@@ -194,7 +194,7 @@ namespace api.Controllers
                 UsedInPost = null,
                 ResponsiveUrls = urlList,
                 ThumbnailUrl = _imageUtils.GenerateCloudinaryLink(250, 70, folder, filename, 0),
-                BlurredImageUrl = _imageUtils.GenerateCloudinaryLink(150, 50, folder, filename, 70),
+                BlurredImageUrl = await ImageUtils.GenerateBase64Placeholder(file, 100, 10L),
                 Version = int.Parse(result.Version),
                 Width = result.Width
             };

@@ -48,7 +48,7 @@ namespace api.Utils
         /// <param name="fileName"></param>
         /// <param name="maxWidth"></param>
         /// <returns>Resized image Bitmap</returns>
-        public static Image ResizeImage(Image image, string fileName, int maxWidth)
+        public static Image ResizeImage(Image image, int maxWidth)
         {
             decimal resizeRatio = (decimal)maxWidth / image.Width;
             var newHeight = image.Width <= maxWidth ? image.Height : Convert.ToInt32(image.Height * resizeRatio);
@@ -147,6 +147,10 @@ namespace api.Utils
             return value;
         }
 
+        public static string GenerateBase64String(string contentType, byte[] value) =>
+            $"data:{contentType};base64,{Convert.ToBase64String(value)}";
+
+
         /// <summary>
         /// Encodes new image and saves it to memory stream
         /// </summary>
@@ -154,7 +158,7 @@ namespace api.Utils
         /// <param name="image"></param>
         /// <param name="ms"></param>
         /// <param name="imageFormat"></param>
-        public static void EncodeBitmapToMs(Image newImage, Image image, MemoryStream ms, string imageFormat)
+        public static void EncodeBitmapToMs(Image newImage, Image image, MemoryStream ms, string imageFormat, long qualityParam = 50L)
         {
             var graphics = Graphics.FromImage(newImage);
 
@@ -165,12 +169,25 @@ namespace api.Utils
             ms.SetLength(0);
             var qualityParamId = Encoder.Quality;
             var encoderParameters = new EncoderParameters(1);
-            encoderParameters.Param[0] = new EncoderParameter(qualityParamId, 50L);
+            encoderParameters.Param[0] = new EncoderParameter(qualityParamId, qualityParam);
             var codec = ImageCodecInfo.GetImageDecoders()
                 .FirstOrDefault(codec => codec.FormatID == ImageUtils.ParseImageFormat(imageFormat).Guid);
 
 
             if (codec != null) newImage.Save(ms, codec, encoderParameters);
+        }
+
+        public static async Task<string> GenerateBase64Placeholder(IFormFile file, int maxWidth, long quality)
+        {
+            var (ms, fileStream, image) = await ImageUtils.CopyImageToMs(file);
+            var newImage = ImageUtils.ResizeImage(image, maxWidth);
+            var imageFormat = file.ContentType.Replace("image/", "");
+
+            ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat, quality);
+
+            var value = await ImageUtils.ConvertMsToBytes(ms);
+
+            return ImageUtils.GenerateBase64String(file.ContentType, value);
         }
     }
 }
