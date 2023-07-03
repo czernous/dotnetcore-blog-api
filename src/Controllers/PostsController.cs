@@ -136,8 +136,9 @@ namespace api.Controllers
 
                 // TODO: ADD USEDINPOST ATTRIBUTE TO IMAGE WHEN ADDED TO POST
 
-                var sanitazer = new HtmlSanitizer();
-                var sanitizedBody = sanitazer.Sanitize(post.Body);
+                var sanitizer = new HtmlSanitizer();
+                sanitizer.AllowedAttributes.Add("class");
+                var sanitizedBody = sanitizer.Sanitize(post.Body);
 
                 post.Body = sanitizedBody;
                 post.Meta.OpenGraph.Title = post.Title;
@@ -158,6 +159,7 @@ namespace api.Controllers
         {
             var post = _postsRepository.FindById(id);
             var sanitizer = new HtmlSanitizer();
+            sanitizer.AllowedAttributes.Add("class");
 
             if (post == null) return NotFound();
 
