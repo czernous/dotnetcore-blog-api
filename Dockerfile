@@ -30,10 +30,11 @@ RUN adduser --disabled-password \
 
 # upgrade musl to remove potential vulnerability
 RUN apk upgrade musl
+RUN apk add curl
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && apk update && apk add --no-cache libgdiplus
 
 USER dotnetuser
 
 COPY --from=build /app/out .
 
-ENTRYPOINT ["./api", "--urls", "http://*:9000"]
+ENTRYPOINT ["./api", "--urls", "http://*:5000"]

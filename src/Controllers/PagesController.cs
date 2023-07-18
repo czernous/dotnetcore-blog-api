@@ -9,7 +9,7 @@ using MongoDB.Bson;
 using System;
 
 #pragma warning disable 1591
-namespace src.Controllers
+namespace api.Controllers
 {
 
     [Route("[controller]")]

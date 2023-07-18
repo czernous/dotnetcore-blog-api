@@ -7,10 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using CloudinaryDotNet;
 using api.Models;
 using api.Interfaces;
 using api.Db;
+using api.Utils;
 using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -39,6 +41,8 @@ namespace api
             services.Configure<BlogDatabaseSettings>(
                 Configuration.GetSection(nameof(BlogDatabaseSettings))
             );
+            services.AddHealthChecks()
+                .AddCheck<RandomHealthCheck>("Random check");
             services.Configure<ApiSettings>(Configuration.GetSection(nameof(ApiSettings)));
 
             services.AddSingleton<IBlogDatabaseSettings>(
@@ -77,6 +81,7 @@ namespace api
             services.AddSingleton(
                 new Cloudinary(new Account(cloudinaryName, cloudinaryKey, cloudinarySecret))
             );
+
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
@@ -85,6 +90,7 @@ namespace api
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
             });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -109,10 +115,14 @@ namespace api
 
             app.UseRouting();
 
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapHealthChecks("/health/startup");
+                endpoints.MapHealthChecks("/healthz");
+                endpoints.MapHealthChecks("/ready");
                 endpoints.MapControllers();
             });
         }
