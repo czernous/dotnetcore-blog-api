@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -56,6 +57,12 @@ namespace api
                 opts.ConnectionString = Environment.GetEnvironmentVariable("API_DB_URL");
             });
 
+            services.AddLogging(builder =>
+            {
+                builder.AddConsole(); // Add console logger
+                                      // Add other loggers if needed
+            });
+
             services.PostConfigure<ApiSettings>(opts =>
             {
                 opts.ApiKey = Environment.GetEnvironmentVariable("API_KEY");
@@ -77,6 +84,7 @@ namespace api
             {
                 throw new ArgumentException("Please specify Cloudinary account details!");
             }
+
             services.AddSingleton(typeof(IMongoRepository<>), typeof(MongoRepository<>));
             services.AddSingleton(
                 new Cloudinary(new Account(cloudinaryName, cloudinaryKey, cloudinarySecret))
@@ -92,6 +100,7 @@ namespace api
             });
 
         }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -15,6 +15,7 @@ using api.Interfaces;
 using api.Utils;
 using MongoDB.Driver;
 using Internal;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable 1591
 
@@ -32,13 +33,16 @@ namespace api.Controllers
         private readonly IMongoRepository<Post> _postsRepository;
         private readonly ImageUtils _imageUtils;
 
+        private readonly ILogger<ImagesController> _logger;
+
         /// Images controller
-        public ImagesController(Cloudinary cloudinary, IMongoRepository<CldImage> imageRepository, IMongoRepository<Post> postsRepository)
+        public ImagesController(Cloudinary cloudinary, IMongoRepository<CldImage> imageRepository, IMongoRepository<Post> postsRepository, ILogger<ImagesController> logger)
         {
             _imageUtils = new ImageUtils(cloudinary);
             _imageRepository = imageRepository;
             _postsRepository = postsRepository;
             _cloudinary = cloudinary;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -47,6 +51,7 @@ namespace api.Controllers
         [HttpGet("{id:length(24)}", Name = "GetImage")]
         public ActionResult<CldImage> Get(string id)
         {
+            _logger.LogInformation("Received an image get request.");
             var image = _imageRepository.FindById(id);
 
             if (image == null) return NotFound();
@@ -88,131 +93,157 @@ namespace api.Controllers
         /// <response code="200">If the image was uploaded</response>
         /// <response code="415">If the uploaded file content-type is incorrect or the request body is not multipart form (file)</response>
         [HttpPost(Name = "UploadImage")]
-        public async Task<ActionResult> UploadFile(IFormFile file, string filename, string folder, string? widths, string? maxWidth, string? quality)
+        public async Task<ActionResult> UploadFile(string filename, string folder, string? widths, string? maxWidth, string? quality)
         {
-            // comma separated ints regex = ^[0-9]{1,4},?([0-9]{1,4},?)*$
 
-            string widthsPattern = @"^[0-9]{1,4},?([0-9]{1,4},?)*$";
-            string qualityPattern = @"[0-9]{1,3}$";
-            string maxWidthPattern = @"[0-9]{1,4}$";
 
-            bool isCommaSeparatedInts = widths != null && Regex.IsMatch(widths, widthsPattern);
-            bool isQualityInt = quality != null && Regex.IsMatch(quality, qualityPattern);
-            bool isMaxWidthInt = maxWidth != null && Regex.IsMatch(maxWidth, maxWidthPattern);
+            string cT = Request.Headers.ContentType;
+            _logger.LogInformation("Received an image upload request.");
+            _logger.LogInformation($"With content-type:  {cT}");
 
-            int qualityInt = quality != null && isQualityInt ? Int16.Parse(quality) : 70;
-            int maxWidthInt = maxWidth != null && isMaxWidthInt ? Int16.Parse(maxWidth) : 2400;
 
-            if (widths != null && !isCommaSeparatedInts) return BadRequest("Widths should be a list of comma separated ints");
-            if (quality != null && !isQualityInt) return BadRequest("Quality (q) should be an int between 0 and 100");
-
-            List<string> widthsList = widths != null ? widths?.Split(',')?.ToList() : null;
-            List<int> widthsListInt = widthsList != null ? widthsList.Select(int.Parse).ToList() : new List<int>() { 512, 718, 1024, 1280 }; // use fallback values if null
-
-            if (file == null) return BadRequest("The file you are uploading is null, make sure that the form name is 'file'");
-
-            if (file.ContentType.ToLower() != "image/jpeg" &&
-                file.ContentType.ToLower() != "image/jpg" &&
-                file.ContentType.ToLower() != "image/png")
+            if (!Request.Headers.ContainsKey("Content-Type"))
             {
-                // not a .jpg or .png file
-                return StatusCode(415);
-
+                _logger.LogWarning("Content-Type header is missing");
+                return BadRequest("Content-Type header is missing");
             }
 
-            if (string.IsNullOrWhiteSpace(filename)) return BadRequest("Please pass Cloudinary filename in the query string");
-            if (string.IsNullOrWhiteSpace(folder)) return BadRequest("Please pass Cloudinary folder name / path in the query string");
-            if (maxWidth != null && !isMaxWidthInt) return BadRequest("maxWidth should be an int between 0 and 9999");
-
-            var imageFilter = Builders<CldImage>.Filter.Eq("Name", filename);
-
-            // check if image exists in the DB
-            var foundImage = _imageRepository.FindOne(imageFilter);
-            if (foundImage != null) return BadRequest($"The image with filename '{filename}' already exists.\nPlease Choose a different name.");
-
-            var extension = "." + file.FileName.Split('.')[^1];
-
-            // Convert Image to Base64 Image string
-            var (ms, fileStream, image) = await ImageUtils.CopyImageToMs(file);
-
-
-            var newImage = ImageUtils.ResizeImage(image, maxWidthInt);
-            var imageFormat = file.ContentType.Replace("image/", "");
-
-            ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
-
-            var value = await ImageUtils.ConvertMsToBytes(ms);
-
-            string b64ImageString = ImageUtils.GenerateBase64String(file.ContentType, value);
-
-            // SAVE TO CLOUDINARY
-            var results = new List<Dictionary<string, string>>();
-            if (results == null) throw new ArgumentNullException(nameof(results));
-            var imageProperties = new Dictionary<string, string>();
-
-
-            var cloudinaryUploadParams = new ImageUploadParams()
+            using (var reqMs = new MemoryStream())
             {
-                File = new FileDescription(@$"{b64ImageString}"),
-                PublicId = $"{folder}/{filename}",
-            };
+                await Request.Body.CopyToAsync(reqMs);
+                var binaryImage = reqMs.ToArray();
 
-            // if no folder and filename specified upload to root folder with random name(duplicates possible)
+                _logger.LogInformation($"Received image data: {binaryImage.Length} bytes");
 
-            if (String.IsNullOrEmpty(filename) || String.IsNullOrEmpty(folder)) cloudinaryUploadParams.PublicId = null;
+                // comma separated ints regex = ^[0-9]{1,4},?([0-9]{1,4},?)*$
 
-            //  uploead image to cloudinary
-            var result = await _cloudinary.UploadAsync(cloudinaryUploadParams).ConfigureAwait(false);
+                string widthsPattern = @"^[0-9]{1,4},?([0-9]{1,4},?)*$";
+                string qualityPattern = @"[0-9]{1,3}$";
+                string maxWidthPattern = @"[0-9]{1,4}$";
 
-            foreach (var token in result.JsonObj.Children())
-            {
-                if (token is JProperty prop)
+                bool isCommaSeparatedInts = widths != null && Regex.IsMatch(widths, widthsPattern);
+                bool isQualityInt = quality != null && Regex.IsMatch(quality, qualityPattern);
+                bool isMaxWidthInt = maxWidth != null && Regex.IsMatch(maxWidth, maxWidthPattern);
+
+                int qualityInt = quality != null && isQualityInt ? Int16.Parse(quality) : 70;
+                int maxWidthInt = maxWidth != null && isMaxWidthInt ? Int16.Parse(maxWidth) : 2400;
+
+                if (widths != null && !isCommaSeparatedInts) return BadRequest("Widths should be a list of comma separated ints");
+                if (quality != null && !isQualityInt) return BadRequest("Quality (q) should be an int between 0 and 100");
+
+                List<string> widthsList = widths != null ? widths?.Split(',')?.ToList() : null;
+                List<int> widthsListInt = widthsList != null ? widthsList.Select(int.Parse).ToList() : new List<int>() { 512, 718, 1024, 1280 }; // use fallback values if null
+
+                var validContentTypes = new List<string> { "image/jpeg", "image/jpg", "image/png" };
+                string contentType = "image/jpeg"; // Set a default content type
+
+                string contentTypeHeader = Request.Headers["Content-Type"];
+
+
+                if (!string.IsNullOrWhiteSpace(contentTypeHeader) && validContentTypes.Contains(contentTypeHeader.ToLower()))
                 {
-                    imageProperties.Add(prop.Name, prop.Value.ToString());
+                    contentType = contentTypeHeader.ToLower();
                 }
-            }
+                else
+                {
+                    _logger.LogWarning($"Unsupported content type received:  {contentType}");
+                    return StatusCode(415); // Unsupported Media Type
+                }
+
+                if (string.IsNullOrWhiteSpace(filename)) return BadRequest("Please pass Cloudinary filename in the query string");
+                if (string.IsNullOrWhiteSpace(folder)) return BadRequest("Please pass Cloudinary folder name / path in the query string");
+                if (maxWidth != null && !isMaxWidthInt) return BadRequest("maxWidth should be an int between 0 and 9999");
+
+                var imageFilter = Builders<CldImage>.Filter.Eq("Name", filename);
+
+                // check if image exists in the DB
+                var foundImage = _imageRepository.FindOne(imageFilter);
+                if (foundImage != null) return BadRequest($"The image with filename '{filename}' already exists.\nPlease Choose a different name.");
+
+                // var extension = "." + file.FileName.Split('.')[^1];
+
+                // Convert Image to Base64 Image string
+                var (ms, image) = await ImageUtils.CopyImageBytesToMs(binaryImage);
+
+
+                var newImage = ImageUtils.ResizeImage(image, maxWidthInt);
+                var imageFormat = contentType.Replace("image/", "");
+
+                ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
+
+                // var value = await ImageUtils.ConvertMsToBytes(ms);
+
+                string b64ImageString = ImageUtils.GenerateBase64String(contentType, binaryImage);
+
+                // SAVE TO CLOUDINARY
+                var results = new List<Dictionary<string, string>>();
+                if (results == null) throw new ArgumentNullException(nameof(results));
+                var imageProperties = new Dictionary<string, string>();
+
+
+                var cloudinaryUploadParams = new ImageUploadParams()
+                {
+                    File = new FileDescription(@$"{b64ImageString}"),
+                    PublicId = $"{folder}/{filename}",
+                };
+
+                // if no folder and filename specified upload to root folder with random name(duplicates possible)
+
+                if (String.IsNullOrEmpty(filename) || String.IsNullOrEmpty(folder)) cloudinaryUploadParams.PublicId = null;
+
+                //  uploead image to cloudinary
+                var result = await _cloudinary.UploadAsync(cloudinaryUploadParams).ConfigureAwait(false);
+
+                foreach (var token in result.JsonObj.Children())
+                {
+                    if (token is JProperty prop)
+                    {
+                        imageProperties.Add(prop.Name, prop.Value.ToString());
+                    }
+                }
 
 
 
-            // create a list of resized image links
-            var urlList = _imageUtils.GenerateUrlList(widthsListInt, qualityInt, folder, filename);
+                // create a list of resized image links
+                var urlList = _imageUtils.GenerateUrlList(widthsListInt, qualityInt, folder, filename);
 
-            // create new image to save to DB
-            CldImage imageData = new CldImage
-            {
-                Bytes = (int)result.Bytes,
-                Format = result.Format,
-                Height = result.Height,
-                Path = result.Url.AbsolutePath,
-                PublicId = result.PublicId,
-                Name = result.PublicId.Substring(result.PublicId.LastIndexOf('/') + 1),
-                ResourceType = result.ResourceType,
-                SecureUrl = result.SecureUrl.AbsoluteUri,
-                Signature = result.Signature,
-                Type = result.JsonObj["type"]?.ToString(),
-                Url = result.Url.AbsoluteUri,
-                UsedInPost = null,
-                ResponsiveUrls = urlList,
-                ThumbnailUrl = _imageUtils.GenerateCloudinaryLink(250, 70, folder, filename, 0),
-                BlurredImageUrl = await ImageUtils.GenerateBase64Placeholder(file, 100, 10L),
-                Version = int.Parse(result.Version),
-                Width = result.Width
-            };
+                // create new image to save to DB
+                CldImage imageData = new CldImage
+                {
+                    Bytes = (int)result.Bytes,
+                    Format = result.Format,
+                    Height = result.Height,
+                    Path = result.Url.AbsolutePath,
+                    PublicId = result.PublicId,
+                    Name = result.PublicId.Substring(result.PublicId.LastIndexOf('/') + 1),
+                    ResourceType = result.ResourceType,
+                    SecureUrl = result.SecureUrl.AbsoluteUri,
+                    Signature = result.Signature,
+                    Type = result.JsonObj["type"]?.ToString(),
+                    Url = result.Url.AbsoluteUri,
+                    UsedInPost = null,
+                    ResponsiveUrls = urlList,
+                    ThumbnailUrl = _imageUtils.GenerateCloudinaryLink(250, 70, folder, filename, 0),
+                    BlurredImageUrl = await ImageUtils.GenerateBase64Placeholder(binaryImage, contentType, 100, 10L),
+                    Version = int.Parse(result.Version),
+                    Width = result.Width
+                };
 
-            results.Add(imageProperties);
+                results.Add(imageProperties);
 
-            if (ModelState.IsValid)
-            {
+                if (ModelState.IsValid)
+                {
 
-                await _imageRepository.InsertOneAsync(imageData);
+                    await _imageRepository.InsertOneAsync(imageData);
 
-                string imageId = imageData.Id.ToString();
-
-                return CreatedAtRoute("UploadImage", new { id = imageId }, image);
-            }
-            else
-            {
-                return BadRequest(ModelState);
+                    string imageId = imageData.Id.ToString();
+                    _logger.LogInformation("Image data saved to the database.");
+                    return CreatedAtRoute("UploadImage", new { id = imageId }, image);
+                }
+                else
+                {
+                    return BadRequest(ModelState);
+                }
             }
 
         }

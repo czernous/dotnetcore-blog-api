@@ -135,6 +135,16 @@ namespace api.Utils
             return (ms, fileStream, image);
         }
 
+
+        public static async Task<(MemoryStream ms, Image image)> CopyImageBytesToMs(byte[] imageBytes)
+        {
+            var ms = new MemoryStream(imageBytes);
+
+            var image = Image.FromStream(ms);
+            return (ms, image);
+        }
+
+
         /// <summary>
         /// Converts MemoryStream to byte array
         /// </summary>
@@ -177,17 +187,17 @@ namespace api.Utils
             if (codec != null) newImage.Save(ms, codec, encoderParameters);
         }
 
-        public static async Task<string> GenerateBase64Placeholder(IFormFile file, int maxWidth, long quality)
+        public static async Task<string> GenerateBase64Placeholder(byte[] imageBytes, string contentType, int maxWidth, long quality)
         {
-            var (ms, fileStream, image) = await ImageUtils.CopyImageToMs(file);
+            var (ms, image) = await ImageUtils.CopyImageBytesToMs(imageBytes);
             var newImage = ImageUtils.ResizeImage(image, maxWidth);
-            var imageFormat = file.ContentType.Replace("image/", "");
+            var imageFormat = contentType.Replace("image/", "");
 
             ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat, quality);
 
             var value = await ImageUtils.ConvertMsToBytes(ms);
 
-            return ImageUtils.GenerateBase64String(file.ContentType, value);
+            return ImageUtils.GenerateBase64String(contentType, value);
         }
     }
 }
