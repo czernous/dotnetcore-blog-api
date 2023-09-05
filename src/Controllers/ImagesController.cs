@@ -163,7 +163,7 @@ namespace api.Controllers
                 // var extension = "." + file.FileName.Split('.')[^1];
 
                 // Convert Image to Base64 Image string
-                var (ms, image) = await ImageUtils.CopyImageBytesToMs(binaryImage);
+                var (ms, image) = ImageUtils.CopyImageBytesToMs(binaryImage);
 
 
                 var newImage = ImageUtils.ResizeImage(image, maxWidthInt);
@@ -171,9 +171,9 @@ namespace api.Controllers
 
                 ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
 
-                // var value = await ImageUtils.ConvertMsToBytes(ms);
+                var resizedImageBytes = await ImageUtils.ConvertMsToBytes(ms);
 
-                string b64ImageString = ImageUtils.GenerateBase64String(contentType, binaryImage);
+                string b64ImageString = ImageUtils.GenerateBase64String(contentType, resizedImageBytes);
 
                 // SAVE TO CLOUDINARY
                 var results = new List<Dictionary<string, string>>();

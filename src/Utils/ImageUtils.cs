@@ -136,7 +136,7 @@ namespace api.Utils
         }
 
 
-        public static async Task<(MemoryStream ms, Image image)> CopyImageBytesToMs(byte[] imageBytes)
+        public static (MemoryStream ms, Image image) CopyImageBytesToMs(byte[] imageBytes)
         {
             var ms = new MemoryStream(imageBytes);
 
@@ -189,7 +189,7 @@ namespace api.Utils
 
         public static async Task<string> GenerateBase64Placeholder(byte[] imageBytes, string contentType, int maxWidth, long quality)
         {
-            var (ms, image) = await ImageUtils.CopyImageBytesToMs(imageBytes);
+            var (ms, image) = ImageUtils.CopyImageBytesToMs(imageBytes);
             var newImage = ImageUtils.ResizeImage(image, maxWidth);
             var imageFormat = contentType.Replace("image/", "");
 
