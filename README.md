@@ -12,8 +12,8 @@ Ports:
 
 
 Requires the following environment variables:
-- `CLOUDINARY_URL` - Cloudinary secret
 - `CLOUDINARY_SECRET` - Cloudinary secret
 - `CLOUDINARY_URL` - cloudinary://`${CLOUDINARY_KEY}`:`${CLOUDINARY_SECRET}`@`${CLOUDINARY_NAME}`
 - `CLOUDINARY_NAME` - your Cloudinary username
 - `API_KEY` - a header used to access the API
+- `API_DB_URL` - a mongodb/cosmosdb url
