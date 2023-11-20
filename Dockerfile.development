@@ -19,7 +19,7 @@ RUN apt-get install --yes curl
 # copy csproj file and restore
 COPY *.sln ./
 COPY src ./src
-COPY Tests ./Tests
+# COPY Tests ./Tests
 RUN dotnet restore
 
 COPY . ./
