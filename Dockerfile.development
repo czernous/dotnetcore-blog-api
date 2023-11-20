@@ -5,7 +5,7 @@ ARG CLOUDINARY_KEY
 ARG CLOUDINARY_SECRET
 
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0.202-bullseye-slim AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.100-1-bookworm-slim-amd64 AS build
 WORKDIR /app
 
 ENV API_KEY=${API_KEY}
