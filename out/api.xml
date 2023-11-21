@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>api</name>
+    </assembly>
+    <members>
+        <member name="M:api.Controllers.ImagesController.#ctor(CloudinaryDotNet.Cloudinary,api.Interfaces.IMongoRepository{api.Models.CldImage},api.Interfaces.IMongoRepository{api.Models.Post},Microsoft.Extensions.Logging.ILogger{api.Controllers.ImagesController})">
+            Images controller
+        </member>
+        <member name="M:api.Controllers.ImagesController.UploadFile(System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            Uploads image to cloudinary and save it's metadata(urls) to the database
+            </summary>
+            <returns>Void</returns>
+             <remarks>
+             The end point accepts "filename" and "folder" query string params as well as "max-width", "widths" and "q" (quality)
+             
+             If the "widths" and "q" params are not passed, they default to:
+             
+             max-width=2400 - accepts ints between 0 and 9999
+             
+             widths=512,718,1024,1280 - note the param only accepts comma separated ints
+             
+             q=70 - accepts ints between 0 and 100
+             
+             The process:
+            
+               1. The code checks if the uploaded image already exists in the database(to be implemented)
+               2. The uploaded file is resized if larger than 2400px wide
+               3. The file is converted to base64 string
+               4. The code checks if the query string contains "folder" or "filename" params
+               5. If the query string is empty, the file is uploaded to Cloudinary with a random name to the root folder \n
+               7. Otherwise it is uploaded to the specified folder with specified filename
+               8. A list of URLs with applied transformations(resized) is created
+               9. A new CldImage entity is created and saved to the database
+               
+             example qs object:  http://fs-app.loc/backend/images?filename=test-image-3/<![CDATA[&]]>folder=test-api-folder/test-images/<![CDATA[&]]>max-width=2400<![CDATA[&]]>widths=512,768,1140,1920<![CDATA[&]]>q=70
+            
+             </remarks>
+             <response code="200">If the image was uploaded</response>
+             <response code="415">If the uploaded file content-type is incorrect or the request body is not multipart form (file)</response>
+        </member>
+        <member name="T:api.Utils.ImageUtils">
+            <summary>
+            Utility methods to manipulate images and upload them to Cloudinary
+            </summary>
+        </member>
+        <member name="M:api.Utils.ImageUtils.#ctor(CloudinaryDotNet.Cloudinary)">
+            <summary>
+            ImageUtils constructor
+            </summary>
+            <param name="cloudinary"></param>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateCloudinaryLink(System.Int32,System.Int32,System.String,System.String,System.Nullable{System.Int32})">
+            <summary>
+            Applies Cloudinary transformations and generates a link
+            </summary>
+            <param name="width"></param>
+            <param name="quality"></param>
+            <param name="path"></param>
+            <param name="fileName"></param>
+            <param name="blurAmount">Blur amount added to the image (0 default)</param>
+            <returns>A link to Cloudinary image</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateResponsiveImage(System.String)">
+            <summary>
+            Generates Cloudinary responsive image link (Suitable if Client app uses Cloudinary Library)
+            </summary>
+            <param name="cloudinaryFilePath"></param>
+            <returns>Cloudinary Responsive URL</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.GenerateUrlList(System.Collections.Generic.List{System.Int32},System.Int32,System.String,System.String)">
+            <summary>
+            Generates an array of links with additional Cloudinary transformations applied (different sizes)
+            </summary>
+            <param name="resolutions"></param>
+            <param name="quality"></param>
+            <param name="path"></param>
+            <param name="fileName"></param>
+            <returns>A list of responsive Cloudinary links</returns>
+        </member>
+        <member name="M:api.Utils.ImageUtils.ConvertImageToBase64(System.Byte[],System.String)">
+            <summary>
+            Converts byte[] to base64 string
+            </summary>
+            <param name="image"></param>
+            <param name="format"></param>
+            <returns>Base64 string</returns>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.Binder.SourceGeneration.BindingExtensions.Configure``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>Registers a configuration instance which TOptions will bind against.</summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.Binder.SourceGeneration.BindingExtensions.Configure``1(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.String,Microsoft.Extensions.Configuration.IConfiguration,System.Action{Microsoft.Extensions.Configuration.BinderOptions})">
+            <summary>Registers a configuration instance which TOptions will bind against.</summary>
+        </member>
+        <member name="M:Microsoft.Extensions.Configuration.Binder.SourceGeneration.BindingExtensions.ValidateConfigurationKeys(System.Type,System.Lazy{System.Collections.Generic.HashSet{System.String}},Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Configuration.BinderOptions)">
+            <summary>If required by the binder options, validates that there are no unknown keys in the input configuration object.</summary>
+        </member>
+    </members>
+</doc>

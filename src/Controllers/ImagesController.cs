@@ -5,16 +5,13 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
 using api.Filters;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using Newtonsoft.Json.Linq;
 using api.Models;
 using api.Interfaces;
 using api.Utils;
 using MongoDB.Driver;
-using Internal;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable 1591
@@ -185,16 +182,6 @@ namespace api.Controllers
                 //  uploead image to cloudinary
                 var result = await _cloudinary.UploadAsync(cloudinaryUploadParams).ConfigureAwait(false);
 
-                foreach (var token in result.JsonObj.Children())
-                {
-                    if (token is JProperty prop)
-                    {
-                        imageProperties.Add(prop.Name, prop.Value.ToString());
-                    }
-                }
-
-
-
                 // create a list of resized image links
                 var urlList = _imageUtils.GenerateUrlList(widthsListInt, qualityInt, folder, filename);
 
@@ -219,8 +206,6 @@ namespace api.Controllers
                     Version = int.Parse(result.Version),
                     Width = result.Width
                 };
-
-                results.Add(imageProperties);
 
                 if (ModelState.IsValid)
                 {

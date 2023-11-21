@@ -17,10 +17,9 @@ RUN apt-get update && apt-get install -y apt-utils libgdiplus libc6-dev
 RUN apt-get install --yes curl
 
 # copy csproj file and restore
-COPY *.sln ./
 COPY src ./src
 # COPY Tests ./Tests
-RUN dotnet restore
+RUN dotnet restore ./src/api.csproj
 
 COPY . ./
 
