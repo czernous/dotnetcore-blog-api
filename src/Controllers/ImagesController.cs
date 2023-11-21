@@ -5,16 +5,13 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
 using api.Filters;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using Newtonsoft.Json.Linq;
 using api.Models;
 using api.Interfaces;
 using api.Utils;
 using MongoDB.Driver;
-using Internal;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable 1591
@@ -134,7 +131,7 @@ namespace api.Controllers
                 List<string> widthsList = widths != null ? widths?.Split(',')?.ToList() : null;
                 List<int> widthsListInt = widthsList != null ? widthsList.Select(int.Parse).ToList() : new List<int>() { 512, 718, 1024, 1280 }; // use fallback values if null
 
-                var validContentTypes = new List<string> { "image/jpeg", "image/jpg", "image/png" };
+                var validContentTypes = new List<string> { "image/jpeg", "image/jpg", "image/png", "image/webp", "image/avif" };
                 string contentType = "image/jpeg"; // Set a default content type
 
                 string contentTypeHeader = Request.Headers["Content-Type"];
@@ -162,18 +159,9 @@ namespace api.Controllers
 
                 // var extension = "." + file.FileName.Split('.')[^1];
 
-                // Convert Image to Base64 Image string
-                var (ms, image) = ImageUtils.CopyImageBytesToMs(binaryImage);
+                var newImage = ImageUtils.ResizeBinaryImage(binaryImage, maxWidthInt);
 
-
-                var newImage = ImageUtils.ResizeImage(image, maxWidthInt);
-                var imageFormat = contentType.Replace("image/", "");
-
-                ImageUtils.EncodeBitmapToMs(newImage, image, ms, imageFormat);
-
-                var resizedImageBytes = await ImageUtils.ConvertMsToBytes(ms);
-
-                string b64ImageString = ImageUtils.GenerateBase64String(contentType, resizedImageBytes);
+                string b64ImageString = ImageUtils.ConvertImageToBase64(newImage, "image/webp"); // resized image is hardcoded as webp by default
 
                 // SAVE TO CLOUDINARY
                 var results = new List<Dictionary<string, string>>();
@@ -193,16 +181,6 @@ namespace api.Controllers
 
                 //  uploead image to cloudinary
                 var result = await _cloudinary.UploadAsync(cloudinaryUploadParams).ConfigureAwait(false);
-
-                foreach (var token in result.JsonObj.Children())
-                {
-                    if (token is JProperty prop)
-                    {
-                        imageProperties.Add(prop.Name, prop.Value.ToString());
-                    }
-                }
-
-
 
                 // create a list of resized image links
                 var urlList = _imageUtils.GenerateUrlList(widthsListInt, qualityInt, folder, filename);
@@ -224,12 +202,10 @@ namespace api.Controllers
                     UsedInPost = null,
                     ResponsiveUrls = urlList,
                     ThumbnailUrl = _imageUtils.GenerateCloudinaryLink(250, 70, folder, filename, 0),
-                    BlurredImageUrl = await ImageUtils.GenerateBase64Placeholder(binaryImage, contentType, 100, 10L),
+                    BlurredImageUrl = await ImageUtils.GenerateBase64Placeholder(newImage, "image/webp", 100),
                     Version = int.Parse(result.Version),
                     Width = result.Width
                 };
-
-                results.Add(imageProperties);
 
                 if (ModelState.IsValid)
                 {
@@ -238,7 +214,7 @@ namespace api.Controllers
 
                     string imageId = imageData.Id.ToString();
                     _logger.LogInformation("Image data saved to the database.");
-                    return CreatedAtRoute("UploadImage", new { id = imageId }, image);
+                    return CreatedAtRoute("UploadImage", new { id = imageId }, imageData);
                 }
                 else
                 {
