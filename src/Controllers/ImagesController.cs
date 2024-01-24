@@ -143,7 +143,7 @@ namespace api.Controllers
                 }
                 else
                 {
-                    _logger.LogWarning($"Unsupported content type received:  {contentType}");
+                    _logger.LogWarning($"Unsupported content type received:  {contentTypeHeader}");
                     return StatusCode(415); // Unsupported Media Type
                 }
 

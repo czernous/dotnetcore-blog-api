@@ -24,6 +24,7 @@ RUN dotnet restore ./src/api.csproj
 COPY . ./
 
 ENV DOTNET_USE_POLLING_FILE_WATCHER 1
+EXPOSE 5000
 #ENV DOTNET_GENERATE_ASPNET_CERTIFICATE false
 #RUN dotnet dev-certs https -ep ${HOME}/.aspnet/https/api.pfx -p 12345 && dotnet dev-certs https --trust && update-ca-certificates
 WORKDIR /app/src

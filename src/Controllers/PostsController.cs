@@ -9,7 +9,7 @@ using Ganss.Xss;
 using api.Filters;
 using MongoDB.Driver;
 using MongoDB.Bson;
-using System.Globalization;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable 1591
 
@@ -24,14 +24,19 @@ namespace api.Controllers
         private readonly IMongoRepository<Post> _postsRepository;
         private readonly IMongoRepository<CldImage> _imageRepository;
 
+        private readonly ILogger<PostsController> _logger;
+
         public PostsController(
             IMongoRepository<CldImage> imageRepository,
             IMongoRepository<Category> categoriesRepository,
-            IMongoRepository<Post> postsRepository)
+            IMongoRepository<Post> postsRepository,
+              ILogger<PostsController> logger)
+
         {
             _imageRepository = imageRepository;
             _categoriesRepository = categoriesRepository;
             _postsRepository = postsRepository;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -52,8 +57,7 @@ namespace api.Controllers
                     p => p.Title.ToLower().Contains(search.ToLower()), sortDefinition, page, pageSize
                 );
 
-            resultPosts = postsByTitle.Data.Count() > 0
-                ? postsByTitle
+            resultPosts = postsByTitle.Data.Any() ? postsByTitle
                 : await _postsRepository
                     .FilterByAndPaginateAsync(
                         p => p.Body.ToLower().Contains(search.ToLower()), sortDefinition, page, pageSize
@@ -92,94 +96,66 @@ namespace api.Controllers
         [HttpPost(Name = "CreatePost")]
         public async Task<ActionResult<Post>> Create(Post post)
         {
-
-            if (ModelState.IsValid)
+            try
             {
-                if (post.Categories != null)
+                if (ModelState.IsValid)
                 {
-                    var existingCategories = _categoriesRepository.FilterBy(Id => true);
-                    List<Category> postCategories = post.Categories.ToList();
-                    // find category name by ID and add to list
-                    foreach (var c in postCategories)
+
+                    var batchTasks = new List<Task>
+                {
+                    ProcessCategoriesAsync(post),
+                    ValidateAndGetImageAsync(post.ImageUrl),
+                    CheckPostUniquenessAsync(post)
+                };
+
+                    if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
+
+                    await Task.WhenAll(batchTasks);
+                    CldImage image = ((Task<CldImage>)batchTasks[1]).Result;
+                    if (image == null)
                     {
-
-                        foreach (var foundCategory in existingCategories)
-                        {
-                            if (foundCategory.Name == c.Name) c.Id = foundCategory.Id;
-                        }
-
-                        if (c._id == null) postCategories.Remove(c);
+                        return BadRequest("The image link must come from Cloudinary. Please use /images to upload an image to Cloudinary and use the link provided");
                     }
+                    post.ResponsiveImgs = image.ResponsiveUrls;
+                    post.BlurredImageUrl = image.BlurredImageUrl;
+                    post.ImageAltText = image.Name;
+                    image.UsedInPost = post;
+
+                    // TODO: ADD USEDINPOST ATTRIBUTE TO IMAGE WHEN ADDED TO POST
+
+                    SanitizeBody(post);
+
+                    post.Meta.OpenGraph.Title = post.Title;
+                    post.Meta.OpenGraph.Description = post.Meta.MetaDescription;
+
+                    await _postsRepository.InsertOneAsync(post);
+
+                    return CreatedAtRoute("CreatePost", new { id = post.Id.ToString() }, post);
                 }
-
-                var postsFilter = Builders<Post>.Filter.Eq("Title", post.Title);
-                var postsFilterBySlug = Builders<Post>.Filter.Eq("Slug", post.Slug);
-
-                var existingPostWithTitle = _postsRepository.FindOne(postsFilter);
-                var existingPostWithSlug = _postsRepository.FindOne(postsFilterBySlug);
-
-                if (existingPostWithTitle != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
-
-                if (existingPostWithSlug != null) return BadRequest("The post with such slug already exists. Please make sure slugs are unique");
-
-                if (post.ImageUrl == null) return BadRequest("The post must contain a feature image. Please upload one");
-
-                var imageFilter = Builders<CldImage>.Filter.Eq("SecureUrl", post.ImageUrl);
-
-                CldImage image = _imageRepository.FindOne(imageFilter);
-
-                if (image == null) return BadRequest("The image link must come from Cloudinary. Please use /images to upload an image to Cloudinary and use the link provided");
-                post.ResponsiveImgs = image.ResponsiveUrls;
-                post.BlurredImageUrl = image.BlurredImageUrl;
-                post.ImageAltText = image.Name;
-                image.UsedInPost = post;
-
-                // TODO: ADD USEDINPOST ATTRIBUTE TO IMAGE WHEN ADDED TO POST
-
-                var sanitizer = new HtmlSanitizer();
-                sanitizer.AllowedAttributes.Add("class");
-                var sanitizedBody = sanitizer.Sanitize(post.Body);
-
-                post.Body = sanitizedBody;
-                post.Meta.OpenGraph.Title = post.Title;
-                post.Meta.OpenGraph.Description = post.Meta.MetaDescription;
-
-                await _postsRepository.InsertOneAsync(post);
-
-                return CreatedAtRoute("CreatePost", new { id = post.Id.ToString() }, post);
+                else
+                {
+                    return BadRequest(ModelState);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+
+                _logger.LogError($"An error occurred: {ex}");
+
+                // Return an appropriate error response
+                return StatusCode(500, "An internal server error occurred");
             }
         }
 
         [HttpPut("{id:length(24)}")]
         public async Task<IActionResult> Update(string id, Post postIn)
         {
-            var post = _postsRepository.FindById(id);
-            var sanitizer = new HtmlSanitizer();
-            sanitizer.AllowedAttributes.Add("class");
+            var post = await _postsRepository.FindByIdAsync(id);
+
 
             if (post == null) return NotFound();
 
-            if (postIn.Categories != null)
-            {
-
-                var existingCateories = _categoriesRepository.FilterBy(Id => true);
-                List<Category> postInCategories = postIn.Categories.ToList();
-                foreach (var c in postInCategories)
-                {
-
-                    foreach (var foundCategory in existingCateories)
-                    {
-                        if (foundCategory.Name == c.Name) c.Id = foundCategory.Id;
-                    }
-
-
-                    if (c._id == null) postInCategories.Remove(c);
-                }
-            }
+            await ProcessCategoriesAsync(postIn);
 
             // add id to post object
             postIn.Id = new ObjectId(id);
@@ -187,25 +163,13 @@ namespace api.Controllers
 
             if (postIn.Title != post.Title || postIn.Slug != post.Slug)
             {
-                // check of post Title and Slug are unique if changed...probably need to dry it up a bit (copied from POST)
-                var postsFilter = Builders<Post>.Filter.Eq("Title", post.Title);
-                var postsFilterBySlug = Builders<Post>.Filter.Eq("Slug", post.Slug);
-
-                var existingPostWithTitle = _postsRepository.FindOne(postsFilter);
-                var existingPostWithSlug = _postsRepository.FindOne(postsFilterBySlug);
-
-                if (existingPostWithTitle != null) return BadRequest("The post with such title already exists. Please create a post with unique title");
-
-                if (existingPostWithSlug != null) return BadRequest("The post with such slug already exists. Please make sure slugs are unique");
+                await CheckPostUniquenessAsync(postIn);
 
             }
 
             if (postIn.ImageUrl != null)
             {
-                // Update image urls if new image url is provided
-                var imageFilter = Builders<CldImage>.Filter.Eq("SecureUrl", post.ImageUrl);
-
-                CldImage image = _imageRepository.FindOne(imageFilter);
+                CldImage image = await ValidateAndGetImageAsync(postIn.ImageUrl);
 
                 if (image == null) return BadRequest("ImageUrl in the Post object is invalid or not found in the database");
 
@@ -216,12 +180,10 @@ namespace api.Controllers
                 postIn.Meta.OpenGraph.Title = postIn.Title;
                 await _imageRepository.ReplaceOneAsync(image);
 
-
             }
 
 
-            var sanitizedBody = sanitizer.Sanitize(postIn.Body);
-            postIn.Body = sanitizedBody;
+            SanitizeBody(postIn);
             postIn.UpdatedAt = DateTime.UtcNow;
             postIn.Meta.OpenGraph.Description = postIn.Meta.MetaDescription;
             postIn.Meta.OpenGraph.Title = postIn.Title;
@@ -244,5 +206,76 @@ namespace api.Controllers
 
             return NoContent();
         }
+
+        private async Task<CldImage> ValidateAndGetImageAsync(string imageUrl)
+        {
+            _logger.LogInformation("Checking if the image reference exists in DB");
+            var imageFilter = Builders<CldImage>.Filter.Eq("SecureUrl", imageUrl);
+            return await _imageRepository.FindOneAsync(imageFilter);
+        }
+
+        private void SanitizeBody(Post post)
+        {
+            var sanitizer = new HtmlSanitizer();
+            sanitizer.AllowedAttributes.Add("class");
+            post.Body = sanitizer.Sanitize(post.Body);
+        }
+
+        private async Task ProcessCategoriesAsync(Post post)
+        {
+            if (post.Categories != null)
+            {
+                _logger.LogInformation("Processing post categories");
+
+                var existingCategories = await _categoriesRepository.FilterByAsync(Id => true);
+
+                var categoryTasks = post.Categories.Select(async category =>
+                {
+                    var existingCategory = existingCategories.ToList().Find(ec => ec.Name == category.Name);
+
+                    if (existingCategory != null)
+                    {
+                        // Category exists, reference it
+                        category.Id = existingCategory.Id;
+                    }
+                    else
+                    {
+                        // Category doesn't exist, add it to the repository and set the reference
+                        await _categoriesRepository.InsertOneAsync(category);
+                    }
+
+                    return category;
+                });
+
+                post.Categories = await Task.WhenAll(categoryTasks);
+            }
+        }
+
+
+        private async Task CheckPostUniquenessAsync(Post post)
+        {
+            _logger.LogInformation("Checking post uniqueness");
+
+            var filter = Builders<Post>.Filter.Or(
+                Builders<Post>.Filter.Eq("Title", post.Title),
+                Builders<Post>.Filter.Eq("Slug", post.Slug)
+            );
+
+            var existingPost = await _postsRepository.FindOneAsync(filter);
+
+            if (existingPost != null)
+            {
+                if (existingPost.Title == post.Title)
+                {
+                    ModelState.AddModelError("Title", "The post with such title already exists. Please create a post with a unique title");
+                }
+
+                if (existingPost.Slug == post.Slug)
+                {
+                    ModelState.AddModelError("Slug", "The post with such slug already exists. Please make sure slugs are unique");
+                }
+            }
+        }
     }
+
 }

@@ -17,12 +17,20 @@ namespace api.Interfaces
         IEnumerable<TDocument> FilterBy(
             Expression<Func<TDocument, bool>> filterExpression);
 
-        Task<PagedData<TDocument>> FilterByAndPaginateAsync(
-            Expression<Func<TDocument, bool>> filterExpression, SortDefinition<TDocument> sortDefinition, int? page, int? pageSize);
+        Task<IEnumerable<TDocument>> FilterByAsync(
+            Expression<Func<TDocument, bool>> filterExpression);
 
         IEnumerable<TProjected> FilterBy<TProjected>(
             Expression<Func<TDocument, bool>> filterExpression,
             Expression<Func<TDocument, TProjected>> projectionExpression);
+
+        Task<IEnumerable<TProjected>> FilterByAsync<TProjected>(
+                   Expression<Func<TDocument, bool>> filterExpression,
+                   Expression<Func<TDocument, TProjected>> projectionExpression);
+
+        Task<PagedData<TDocument>> FilterByAndPaginateAsync(
+            Expression<Func<TDocument, bool>> filterExpression, SortDefinition<TDocument> sortDefinition, int? page, int? pageSize);
+
 
         TDocument FindOne(FilterDefinition<TDocument> filterExpression);
 
