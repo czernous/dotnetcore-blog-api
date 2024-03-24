@@ -48,7 +48,7 @@ WORKDIR /app
 # RUN apk upgrade musl
 RUN apk update && apk add --no-cache libgdiplus
 
-EXPOSE 80
+# EXPOSE 80
 
 COPY --from=build /app/out .
 
